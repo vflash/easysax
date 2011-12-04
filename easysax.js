@@ -81,9 +81,9 @@ function easySAXParser(strict) {
 	function nullFunc() {};
 
 	var is_strict = false; // более строгий контройль ошибок
-	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onError, onComment;
-	var is_onError, is_onComment;
-	
+	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onComment, onError, onQuestion;
+	var is_onError, is_onComment, is_Question;
+
 	
 	var isNamespace = false, useNS , default_xmlns, xmlns
 	, nsmatrix = {xmlns: xmlns}
@@ -244,55 +244,49 @@ function easySAXParser(strict) {
 					continue;
 				};
 
-				if (w === 61) { // "="
-					if (s[j+1] !== '"') {
-						// error. invalid char
-						//console.log('error 2')
-						return attr_res = attr_error;
-					};
-
-					name = s.substring(i, j);
-					i = j+2;
-					j = s.indexOf('"', i);
-
-					if (j === -1) {
-						// error. invalid char
-						//console.log('error 3')
-						return attr_res = attr_error;
-					};
-
-
-					if (j+1 < l) {
-						w = s.charCodeAt(j+1);
-						if (w > 32 || w < 9 || (w<32 && w>13)) {
-							// error. invalid char
-							//console.log('error 4')
-							return attr_res = attr_error;
-						};
-					};
-
-
-					value = s.substring(i, j);
-					ok = true;
-
-					i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
-					break;
+				if (w !== 61 || s.charCodeAt(j+1) !== 34) { // "=" == 61, '"' == 34
+					// console.log('error 2');
+					// error. invalid char
+					return attr_res = attr_error;
 				};
 
-				// console.log('error 5');
-				// error. invalid char
-				return attr_res = attr_error;
+				if (s.charCodeAt(j+1) !== 34) { // '"'
+					// error. invalid char
+					//console.log('error 2')
+					return attr_res = attr_error;
+				};
+
+				name = s.substring(i, j);
+				j = s.indexOf('"', i = j+2 );
+
+				if (j === -1) {
+					// error. invalid char
+					//console.log('error 3')
+					return attr_res = attr_error;
+				};
+
+
+				if (j+1 < l) {
+					w = s.charCodeAt(j+1);
+
+					if (w > 32 || w < 9 || (w<32 && w>13)) {
+						// error. invalid char
+						//console.log('error 4')
+						return attr_res = attr_error;
+					};
+				};
+
+
+				value = s.substring(i, j);
+				ok = true;
+
+				i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
+				break;
 			};
 
-			if (!ok) {
+			if (!ok || name === 'xmlns:xmlns') {
 				// console.log('error 6')
 				// error. invalid char
-				return attr_res = attr_error;
-			};
-
-			// ----  namespace  ---- 
-			if (name === 'xmlns:xmlns') {
-				// error. алиас с таким именем быть неможет
 				return attr_res = attr_error;
 			};
 
@@ -334,10 +328,13 @@ function easySAXParser(strict) {
 
 				w = name.indexOf(':');
 				if (w !== -1) {
-					name = (nsmatrix[name.substring(0, w)] || 'uxxx') + name.substr(w);
+					if (w = nsmatrix[name.substring(0, w)] ) {
+						res[w + name.substr(w)] = value;
+					};
 				} else {
-					name = nsmatrix.xmlns + ':' + name;
+					res[name] = value;
 				};
+				continue;
 			};
 
 			res[name] = value;
@@ -355,13 +352,12 @@ function easySAXParser(strict) {
 
 				w = name.indexOf(':');
 				if (w !== -1) {
-					w = nsmatrix[name.substring(0, w)];
-					if (w) name = w + name.substr(w);
+					if (w = nsmatrix[name.substring(0, w)]) {
+						res[w + name.substr(w)] = attr_list[i];
+					};
 				} else {
-					name = nsmatrix.xmlns + ':' + name;
+					res[name] = attr_list[i];
 				};
-
-				res[name] = attr_list[i];
 			};
 		};
 		
@@ -469,6 +465,10 @@ function easySAXParser(strict) {
 				if (j === -1) { // error
 					error('...?>');
 					return;
+				};
+				
+				if (is_Question) {
+					onQuestion(false, false, xml.substring(i, j+2));
 				};
 
 				j += 2;
