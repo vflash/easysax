@@ -2,8 +2,8 @@
 
 Benchmark  "test.js"
 
-file #1
---------------------
+parse file #1
+-----------------------------------
 saxjs: 12671ms
 libxml: 11311ms
 expat: 6118ms
@@ -14,8 +14,8 @@ easysax: 740ms    //  namespace--off, attr()--off , entity_decode--off
 
 
 
-file #2 (много атрибутов)
---------------------
+parse file #2 (много атрибутов)
+-----------------------------------
 saxjs: 84060ms
 libxml: 48919ms
 expat: 39444ms
