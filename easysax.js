@@ -208,25 +208,20 @@ function easySAXParser(strict) {
 
 
 	function getAttrs() {
+		if (attr_res !== u) return attr_res;
+
 		var u
 		, res = {}
 		, s = attr_string
 		, i = attr_posstart
 		, l = s.length
+		, attr_list = hasSurmiseNS ? [] : false
 		, name, value, ok
 		, j, w, nn, n
-		, attr_list = isNamespace ? [] : false
 		, hasNewMatrix
 		, alias, newalias, pz
 		; 
 
-		
-
-		if (attr_res !== u) {
-			return attr_res;
-		};
-		
-		
 		for(; i < l; i++) {
 			w = s.charCodeAt(i);
 
@@ -235,7 +230,6 @@ function easySAXParser(strict) {
 			};
 
 			if (w < 65 || w >122 || (w<97 && w>90) ) { // ожидаем символ
-			//if (w === 47 || w== 61 || w==34) { // '/' '=' '"'
 				// error. invalid char
 				//console.log('error 1')
 				return attr_res = attr_error;
@@ -244,8 +238,11 @@ function easySAXParser(strict) {
 			ok = false;
 
 			for(j = i + 1; j < l; j++) {
-
 				w = s.charCodeAt(j);
+
+				if ( w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 ) {
+					continue;
+				};
 
 				if (w === 61) { // "="
 					if (s[j+1] !== '"') {
@@ -282,16 +279,14 @@ function easySAXParser(strict) {
 					break;
 				};
 
-				if (w === 47 || w === 34 || w===32 || (w<14 && w > 8) ) { // \f\n\r\t\v пробел
-					// error. invalid char
-					//console.log('error 5')
-					return attr_res = attr_error;
-				};
+				// console.log('error 5');
+				// error. invalid char
+				return attr_res = attr_error;
 			};
 
 			if (!ok) {
+				// console.log('error 6')
 				// error. invalid char
-				//console.log('error 6')
 				return attr_res = attr_error;
 			};
 
@@ -348,27 +343,29 @@ function easySAXParser(strict) {
 			res[name] = value;
 		};
 
-		if (ok) {
-			if (hasSurmiseNS)  {
-				for (i = 0, l = attr_list.length; i < l; i++) {
-					name = attr_list[i++];
 
-					w = name.indexOf(':');
-					if (w !== -1) {
-						w = nsmatrix[name.substring(0, w)];
-						if (w) name = w + name.substr(w);
-					} else {
-						name = nsmatrix.xmlns + ':' + name;
-					};
-
-					res[name] = attr_list[i];
-				};
-			};
-			
-			return res;
+		if (!ok) {
+			return attr_res = false;
 		};
 		
-		return false;
+
+		if (hasSurmiseNS)  {
+			for (i = 0, l = attr_list.length; i < l; i++) {
+				name = attr_list[i++];
+
+				w = name.indexOf(':');
+				if (w !== -1) {
+					w = nsmatrix[name.substring(0, w)];
+					if (w) name = w + name.substr(w);
+				} else {
+					name = nsmatrix.xmlns + ':' + name;
+				};
+
+				res[name] = attr_list[i];
+			};
+		};
+		
+		return attr_res = res;
 	};
 	
 	function error(msg) {
@@ -446,7 +443,7 @@ function easySAXParser(strict) {
 				};
 				
 
-				if (w === 45 && w === xml.charCodeAt(i+3)) { // 45 == "-"
+				if (w === 45 && xml.charCodeAt(i+3) === 45) { // 45 == "-"
 					j = xml.indexOf('-->', i);
 					if (j === -1) {
 						error('comment');
@@ -524,7 +521,7 @@ function easySAXParser(strict) {
 
 				if (w===32 || (w<14 && w > 8)) { // \f\n\r\t\v пробел
 					elem = x.substring(0, q)
-					attr_res = u;
+					attr_res = u; // возможно есть атирибуты
 					break;
 				};
 

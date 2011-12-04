@@ -1,9 +1,29 @@
 
 
+Benchmark  "test.js"
+
+file #1
+--------------------
+saxjs: 12671ms
 libxml: 11311ms
 expat: 6118ms
 expat buffer: 5278ms
-saxjs: 11626ms
-easysax: 1739ms
+easysax : 1739ms  //  namespace--on, attr()--on , entity_decode--on
+easysax: 1035ms   //  namespace--off, attr()--on , entity_decode--on
+easysax: 740ms    //  namespace--off, attr()--off , entity_decode--off
+
+
+
+file #2 (много атрибутов)
+--------------------
+saxjs: 84060ms
+libxml: 48919ms
+expat: 39444ms
+expat buffer: 35375ms
+easysax: 14655ms  //  namespace--on, attr()--on , entity_decode--on
+easysax: 9874ms   //  namespace--off, attr()--on , entity_decode--on
+easysax: 3531ms   //  namespace--off, attr()--off , entity_decode--on
+easysax: 2954ms   //  namespace--off, attr()--off , entity_decode--off
+
 
 
