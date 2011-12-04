@@ -1,4 +1,4 @@
-
+п»ї
 
 Benchmark  "test.js"
 
@@ -14,7 +14,7 @@ easysax: 740ms    //  namespace--off, attr()--off , entity_decode--off
 
 
 
-file #2 (много атрибутов)
+file #2 (РјРЅРѕРіРѕ Р°С‚СЂРёР±СѓС‚РѕРІ)
 --------------------
 saxjs: 84060ms
 libxml: 48919ms
