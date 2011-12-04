@@ -2,7 +2,7 @@
 	new function() {
 		var parser = new easySaxParser();
 
-		parser.ns('rss', {
+		parser.ns('rss', { // or false
 			rss: 'http://purl.org/rss/1.0/',
 			atom: 'http://www.w3.org/2005/Atom',
 			xhtml: 'http://www.w3.org/1999/xhtml',
@@ -10,7 +10,8 @@
 		});
 
 
-		parser.on('error', function() {
+		parser.on('error', function(msg) {
+			//console.log(msg)
 		});
 
 		parser.on('startNode', function(elem, attr, uq, str, tagend) {
@@ -23,7 +24,7 @@
 			};
 		});
 
-		parser.on('endNode', function(elem, str, tagstart) {
+		parser.on('endNode', function(elem, uq, str, tagstart) {
 			return;
 			if (!tagstart) console.log('-  ' + str)
 		});
@@ -34,7 +35,7 @@
 			console.log('   '+s)
 		});
 
-		parser.on('cdata', function() {
+		parser.on('cdata', function(data) {
 		});
 
 
