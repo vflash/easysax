@@ -1,0 +1,658 @@
+﻿	/*
+	new function() {
+		var parser = new easySaxParser();
+
+		parser.ns('rss', {
+			rss: 'http://purl.org/rss/1.0/',
+			atom: 'http://www.w3.org/2005/Atom',
+			xhtml: 'http://www.w3.org/1999/xhtml',
+			media: 'http://search.yahoo.com/mrss/'
+		});
+
+
+		parser.on('error', function() {
+		});
+
+		parser.on('startNode', function(elem, attr, uq, str, tagend) {
+			attr();
+			return;
+			if (tagend) {
+				console.log('   '+str)
+			} else {
+				console.log('+  '+str)
+			};
+		});
+
+		parser.on('endNode', function(elem, str, tagstart) {
+			return;
+			if (!tagstart) console.log('-  ' + str)
+		});
+
+		parser.on('textNode', function(s, uq) {
+			uq(s);
+			return
+			console.log('   '+s)
+		});
+
+		parser.on('cdata', function() {
+		});
+
+
+		parser.on('comment', function(text) {
+			//console.log('--'+text+'--')
+		});
+
+		//parser.on('question', function() {}); // <? ... ?>
+		//parser.on('attention', function() {}); // <!XXXXX zzzz="eeee">
+
+		console.time('easysax');
+		for(var z=1000;z--;) {
+			parser.parse(xml)
+		};
+		console.timeEnd('easysax');
+	};
+
+
+	
+	
+	*/
+
+// << ------------------------------------------------------------------------ >> //
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function easySAXParser(strict) {
+	'use strict';
+
+	if (!this) return null;
+
+	function nullFunc() {};
+
+	var is_strict = false; // более строгий контройль ошибок
+	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onError, onComment;
+	var is_onError, is_onComment;
+	
+	
+	var isNamespace = false, useNS , default_xmlns, xmlns
+	, nsmatrix = {xmlns: xmlns}
+	, hasSurmiseNS = false
+	;
+
+	this.on = function(name, cb) {
+		if (typeof cb !== 'function') {
+			if (cb !== null) return;
+		};
+
+		switch(name) {
+			case 'error': onError = cb; is_onError = !!cb; break;
+			case 'startNode': onStartNode = cb; break;
+			case 'endNode': onEndNode = cb; break;
+			case 'textNode': onTextNode = cb; break;
+			case 'cdata': onCDATA = cb; break;
+			case 'comment': onComment = cb; is_onComment = !!cb; break;
+
+			case 'question': break; // <? ....  ?>
+			case 'attention': break; // <!XXXXX zzzz="eeee">
+			
+		}; 
+	};
+
+	this.ns = function(root, ns) {
+		if (!root || typeof root !== 'string' || !ns) {
+			return;
+		};
+
+		var u, x = {}, ok, v, i;
+
+		for(i in ns) {
+			v = ns[i];
+			if (typeof v === 'string') {
+				if (root === v) ok = true;
+				x[i] = v;
+			};
+		};
+		
+		if (ok) {
+			isNamespace = true;
+			default_xmlns = root;
+			useNS = x;
+		};
+	};
+
+	this.parse = function(xml) {
+		if (typeof xml !== 'string') {
+			return;
+		};
+
+		if (isNamespace) {
+			nsmatrix = {xmlns: default_xmlns};
+
+			parse(xml);
+			
+			nsmatrix = false;
+
+		} else {
+			parse(xml);
+		};
+	};
+
+	// -----------------------------------------------------
+
+	var xharsQuot={constructor: false, hasOwnProperty: false, isPrototypeOf: false, propertyIsEnumerable: false, toLocaleString: false, toString: false, valueOf: false
+		, quot: '"'
+		, QUOT: '"'
+		, amp: '&'
+		, AMP: '&'
+		, nbsp: '\u00A0'
+		, apos: '\''
+		, lt: '<'
+		, LT: '<'
+		, gt: '>'
+		, GT: '>'
+		, copy: '\u00A9'
+		, laquo: '\u00AB'
+		, raquo: '\u00BB'
+		, reg: '\u00AE'
+		, deg: '\u00B0'
+		, plusmn: '\u00B1'
+		, sup2: '\u00B2'
+		, sup3: '\u00B3'
+		, micro: '\u00B5'
+		, para: '\u00B6'
+	};
+
+
+	function rpEntities(s, d, x, z) {
+		if (z) {
+			return xharsQuot[z] || '\x01';
+		};
+
+		if (d) {
+			return String.fromCharCode(d);
+		};
+
+		return String.fromCharCode(parseInt(x, 16));
+	};
+
+	function unEntities(s, i) {
+		s = String(s);
+		if (s.length > 3 && s.indexOf('&') !== -1) {
+			if (s.indexOf('&gt;') !== -1) s = s.replace(/&gt;/ig, '>');
+			if (s.indexOf('&lt;') !== -1) s = s.replace(/&lt;/ig, '<');
+			if (s.indexOf('&quot;')) s = s.replace(/&quot;/ig, '"');
+
+			if (s.indexOf('&') !== -1) {
+				s = s.replace(/&#(\d+);|&#x([0123456789abcdef]+);|&(\w+);/ig, rpEntities);
+			};
+		};
+
+		return s;
+	};
+
+	var attr_string; // = ''
+	var attr_posstart; // = 0
+	var attr_res;
+	var attr_error = is_strict ?  null : false;
+
+
+	/*
+	var configNS = {
+		rss: 'http://purl.org/rss/1.0/',
+		atom: 'http://www.w3.org/2005/Atom',
+		xhtml: 'http://www.w3.org/1999/xhtml',
+
+		media: 'http://search.yahoo.com/mrss/',
+		georss: 'http://www.georss.org/georss',
+		gd: 'http://schemas.google.com/g/2005'
+	};
+	*/
+
+
+	function getAttrs() {
+		var u
+		, res = {}
+		, s = attr_string
+		, i = attr_posstart
+		, l = s.length
+		, name, value, ok
+		, j, w, nn, n
+		, attr_list = isNamespace ? [] : false
+		, hasNewMatrix
+		, alias, newalias, pz
+		; 
+
+		
+
+		if (attr_res !== u) {
+			return attr_res;
+		};
+		
+		
+		for(; i < l; i++) {
+			w = s.charCodeAt(i);
+
+			if (w===32 || (w<14 && w > 8) ) { // \f\n\r\t\v
+				continue
+			};
+
+			if (w < 65 || w >122 || (w<97 && w>90) ) { // ожидаем символ
+			//if (w === 47 || w== 61 || w==34) { // '/' '=' '"'
+				// error. invalid char
+				//console.log('error 1')
+				return attr_res = attr_error;
+			};
+
+			ok = false;
+
+			for(j = i + 1; j < l; j++) {
+
+				w = s.charCodeAt(j);
+
+				if (w === 61) { // "="
+					if (s[j+1] !== '"') {
+						// error. invalid char
+						//console.log('error 2')
+						return attr_res = attr_error;
+					};
+
+					name = s.substring(i, j);
+					i = j+2;
+					j = s.indexOf('"', i);
+
+					if (j === -1) {
+						// error. invalid char
+						//console.log('error 3')
+						return attr_res = attr_error;
+					};
+
+
+					if (j+1 < l) {
+						w = s.charCodeAt(j+1);
+						if (w > 32 || w < 9 || (w<32 && w>13)) {
+							// error. invalid char
+							//console.log('error 4')
+							return attr_res = attr_error;
+						};
+					};
+
+
+					value = s.substring(i, j);
+					ok = true;
+
+					i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
+					break;
+				};
+
+				if (w === 47 || w === 34 || w===32 || (w<14 && w > 8) ) { // \f\n\r\t\v пробел
+					// error. invalid char
+					//console.log('error 5')
+					return attr_res = attr_error;
+				};
+			};
+
+			if (!ok) {
+				// error. invalid char
+				//console.log('error 6')
+				return attr_res = attr_error;
+			};
+
+			// ----  namespace  ---- 
+			if (name === 'xmlns:xmlns') {
+				// error. алиас с таким именем быть неможет
+				return attr_res = attr_error;
+			};
+
+
+			if (isNamespace) { // 
+				if (hasSurmiseNS) {
+					//var alias, newalias = false;
+
+					if (newalias = name === 'xmlns' ? 'xmlns' : name.charCodeAt(0) === 120 && name.substr(0, 6) === 'xmlns:' && name.substr(6) ) {
+						alias = useNS[unEntities(value)];
+
+						if (alias) {
+							if (!hasNewMatrix && nsmatrix[newalias] !== alias) {
+								hasNewMatrix = true;
+								nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
+								nsmatrix = nn;
+							};
+
+							nsmatrix[newalias] = alias;
+						} else {
+							if (nsmatrix[newalias]) {
+								if (!hasNewMatrix) {
+									hasNewMatrix = true;
+									nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
+									nsmatrix = nn;
+								};
+
+								nsmatrix[newalias] = false;
+							};
+						};
+
+						res[name] = value;
+						continue;
+					};
+
+					attr_list.push(name, value);
+					continue;
+				};
+
+				w = name.indexOf(':');
+				if (w !== -1) {
+					name = (nsmatrix[name.substring(0, w)] || 'uxxx') + name.substr(w);
+				} else {
+					name = nsmatrix.xmlns + ':' + name;
+				};
+			};
+
+			res[name] = value;
+		};
+
+		if (ok) {
+			if (hasSurmiseNS)  {
+				for (i = 0, l = attr_list.length; i < l; i++) {
+					name = attr_list[i++];
+
+					w = name.indexOf(':');
+					if (w !== -1) {
+						w = nsmatrix[name.substring(0, w)];
+						if (w) name = w + name.substr(w);
+					} else {
+						name = nsmatrix.xmlns + ':' + name;
+					};
+
+					res[name] = attr_list[i];
+				};
+			};
+			
+			return res;
+		};
+		
+		return false;
+	};
+	
+	function error(msg) {
+		if (is_onError) {
+			onError(msg);
+		};
+	};
+
+
+	
+	// xml - string
+	function parse(xml) {
+		var u
+		, nodestack = []
+		, stacknsmatrix = []
+		, string_node
+		, elem
+		, hasAttr
+		, tagend
+		, tagstart
+		, j = 0, i = 0
+		, x, y, q, w
+		, xmlns
+		, stopIndex
+		, stop
+		, _nsmatrix
+		;
+
+		while(j !== -1) {
+			stop = stopIndex > 0;
+
+			if (xml.charCodeAt(j) === 60) { // "<"
+				i = j;
+			} else {
+				i = xml.indexOf('<', j);
+			};
+
+			if (i === -1) { // конец разбора
+				//j = -1;
+				if (is_strict) {
+					// проверить что дальше нет символов
+					// if (true) error(1)
+				};
+
+				if (nodestack.length) {
+					error('end file');
+					return;
+				};
+
+				return;
+			};
+
+			if (j !== i && !stop) {
+				onTextNode(xml.substring(j, i), unEntities);
+			};
+
+			w = xml.charCodeAt(i+1);
+			if (w === 33) { // "!"
+				w = xml.charCodeAt(i+2);
+				if (w === 91 && xml.substr(i+3, 6) === 'CDATA[') { // 91 == "["
+					j = xml.indexOf(']]>', i);
+					if (j === -1) {
+						error('cdata');
+						return;
+					};
+					
+					//x = xml.substring(i+9, j);
+					if (!stop) {
+						onCDATA(xml.substring(i+9, j), false);
+					};
+					
+
+					j += 3;
+					continue;
+				};
+				
+
+				if (w === 45 && w === xml.charCodeAt(i+3)) { // 45 == "-"
+					j = xml.indexOf('-->', i);
+					if (j === -1) {
+						error('comment');
+						return;
+					};
+
+
+					if (is_onComment && !stop) {
+						onComment(xml.substring(i+4, j), unEntities);
+					};
+
+					j += 3;
+					continue;
+				};
+
+				// error
+				error('<!...>'); // неизвестно что
+				return;
+
+			} else 
+			if (w === 63) { // "?"
+				j = xml.indexOf('?>', i);
+				if (j === -1) { // error
+					error('...?>');
+					return;
+				};
+
+				j += 2;
+				continue;
+			};
+
+			j = xml.indexOf('>', i+1);
+			
+			if (j == -1) { // error 
+				error('...>');
+				return;
+			};
+
+			if (!stop) {
+				string_node = xml.substring(i, j+1);
+			};
+			
+
+			if (xml.charCodeAt(i+1) === 47) { // </...
+				x = elem = xml.substring(i+2, j);
+				w = x.charCodeAt(0);
+
+				tagstart = false;
+				tagend = true;
+			} else 
+			if (xml.charCodeAt(j-1) ===  47) { // .../>
+				x = elem = xml.substring(i+1, j-1);
+
+				tagstart = true;
+				tagend = true;
+			} else {
+				x = elem = xml.substring(i+1, j);
+
+				tagstart = true;
+				tagend = false;
+			};
+			
+			if ( !(w > 96  && w < 123 || w > 64 && w <91) ) {
+				error('first char nodeName');
+				return;
+			};
+
+			attr_res = false;
+			for(q = 1, y = x.length; q < y; q++) {
+				w = x.charCodeAt(q);
+				
+				if ( w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 ) {
+					continue;
+				};
+
+				if (w===32 || (w<14 && w > 8)) { // \f\n\r\t\v пробел
+					elem = x.substring(0, q)
+					attr_res = u;
+					break;
+				};
+
+				error('invalid nodeName');
+				return;
+			};
+
+
+			if (tagend) {
+				if (!tagstart) {
+					if (nodestack.pop() !== elem) {
+						error('close tag');
+						return;
+					};
+				};
+				
+			} else {
+				nodestack.push(elem);
+			};
+			
+
+
+			if (isNamespace) {
+				if (stop) {
+					if (tagend) {
+						if (!tagstart) {
+							if (--stopIndex === 0) {
+								nsmatrix = stacknsmatrix.pop();
+							};
+						};
+
+					} else {
+						stopIndex += 1;
+					};
+
+
+					j += 1;
+					continue;
+				};
+
+				_nsmatrix = nsmatrix;
+
+				if (!tagend) {
+					stacknsmatrix.push(nsmatrix);
+					
+					if (attr_res !== false) {
+						if (hasSurmiseNS = x.indexOf('xmlns', q) !== -1) {
+							attr_string = x;
+							attr_posstart = q;
+
+							getAttrs();
+
+							hasSurmiseNS = false;
+						};
+					};
+				};
+
+
+				w = elem.indexOf(':'); 
+				if (w !== -1) {
+					xmlns = nsmatrix[elem.substring(0, w)];
+					elem = elem.substr(w);
+				} else {
+					xmlns = nsmatrix.xmlns;
+				};
+
+				
+				if (!xmlns) {
+					if (tagend) {
+						if (tagstart) {
+							nsmatrix = _nsmatrix;
+						} else {
+							nsmatrix = stacknsmatrix.pop();
+						};
+					} else {
+						stopIndex = 1;
+						attr_res = u;
+					};
+
+					j += 1;
+					continue;
+				};
+
+				elem = nsmatrix.xmlns + ':' + elem;
+			};
+
+			if (tagstart) { // is_onStartNode
+				attr_string = x;
+				attr_posstart = q;
+
+				onStartNode(elem, getAttrs, unEntities, string_node, tagend);
+				attr_res = u;
+			};
+
+			
+			if (tagend) {
+				onEndNode(elem, unEntities, string_node, tagstart); //, unEntities
+
+				if (isNamespace) {
+					if (tagstart) {
+						nsmatrix = _nsmatrix;
+					} else {
+						nsmatrix = stacknsmatrix.pop();
+					};
+				};
+			};
+
+			j += 1;
+		}; 
+	};
+};
+
+
+if (typeof exports === 'object' && this == exports) {
+	module.exports = easySAXParser;
+};
+
+
+
