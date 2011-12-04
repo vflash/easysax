@@ -1,7 +1,8 @@
 ﻿'use strict';
 
 
-var EasySax = require("../easysax.js");
+//var EasySax = require("../easysax.js");
+var EasySax = require("../eee.js");
 
 
 
@@ -66,7 +67,7 @@ console.log(xml.length);
 	};
 
 	new function() {
-		//return;
+		return;
 		var libxml = require("libxmljs");
 
 		console.time('libxml');
@@ -78,7 +79,7 @@ console.log(xml.length);
 	};
 
 	new function() {
-		//return;
+		return;
 		var Expat = require('node-expat'), parser;
 		function nullfunc() {};
 
@@ -96,7 +97,7 @@ console.log(xml.length);
 	};
 
 	new function() {
-		//return;
+		return;
 		var Expat = require('node-expat');
 		var buff = new Buffer(xml), parser;
 		function nullfunc() {};
@@ -178,7 +179,8 @@ console.log(xml.length);
 		//parser.on('attention', function() {}); // <!XXXXX zzzz="eeee">
 
 		var zz = 1000;
-		if (zz>50) {
+		
+		if (zz > 50) {
 			for(var z=50; z--;) {
 				parser.parse(xml, 'rss')
 			};
