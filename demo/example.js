@@ -40,7 +40,7 @@ new function () {
 		})
 	};
 
-	console.log(res);
+	console.log(JSON.stringify(res, null, '\t'));
 	console.log();
 	console.log('size xml - ' + xml.length);
 	console.log('size json - ' + size_json);
