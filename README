@@ -1,0 +1,9 @@
+
+
+libxml: 11311ms
+expat: 6118ms
+expat buffer: 5278ms
+saxjs: 11626ms
+easysax: 1739ms
+
+
