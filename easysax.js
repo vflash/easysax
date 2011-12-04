@@ -207,19 +207,6 @@ function easySAXParser(strict) {
 	var attr_error = is_strict ?  null : false;
 
 
-	/*
-	var configNS = {
-		rss: 'http://purl.org/rss/1.0/',
-		atom: 'http://www.w3.org/2005/Atom',
-		xhtml: 'http://www.w3.org/1999/xhtml',
-
-		media: 'http://search.yahoo.com/mrss/',
-		georss: 'http://www.georss.org/georss',
-		gd: 'http://schemas.google.com/g/2005'
-	};
-	*/
-
-
 	function getAttrs() {
 		var u
 		, res = {}
