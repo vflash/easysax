@@ -1,6 +1,6 @@
 ﻿	/*
 	new function() {
-		var parser = new easySaxParser();
+		var parser = new EasySAXParser();
 
 		parser.ns('rss', { // or false
 			rss: 'http://purl.org/rss/1.0/',
@@ -73,7 +73,7 @@
 
 
 
-function easySAXParser(strict) {
+function EasySAXParser(strict) {
 	'use strict';
 
 	if (!this) return null;
@@ -245,20 +245,25 @@ function easySAXParser(strict) {
 					continue;
 				};
 
-				if (w !== 61 || s.charCodeAt(j+1) !== 34) { // "=" == 61, '"' == 34
+				if (w !== 61) { // "=" == 61
 					// console.log('error 2');
 					// error. invalid char
 					return attr_res = attr_error;
 				};
+				
+				name = s.substring(i, j);
 
-				if (s.charCodeAt(j+1) !== 34) { // '"'
+				w = s.charCodeAt(j+1);
+				if (w === 34) {  // '"'
+					j = s.indexOf('"', i = j+2 );
+				} else
+				if (w === 39) {
+					j = s.indexOf('\'', i = j+2 );
+				} else {  // "'"
 					// error. invalid char
 					//console.log('error 2')
 					return attr_res = attr_error;
 				};
-
-				name = s.substring(i, j);
-				j = s.indexOf('"', i = j+2 );
 
 				if (j === -1) {
 					// error. invalid char
@@ -644,7 +649,7 @@ function easySAXParser(strict) {
 
 
 if (typeof exports === 'object' && this == exports) {
-	module.exports = easySAXParser;
+	module.exports = EasySAXParser;
 };
 
 
