@@ -328,7 +328,7 @@ function easySAXParser(strict) {
 				};
 
 				w = name.length;
-				while(w--) {
+				while(--w) {
 					if (name.charCodeAt(w) === 58) { // ':'
 						if (w = nsmatrix[name.substring(0, w)] ) {
 							res[w + name.substr(w)] = value;
@@ -355,7 +355,7 @@ function easySAXParser(strict) {
 				name = attr_list[i++];
 
 				w = name.length;
-				while(w--) { // name.indexOf(':')
+				while(--w) { // name.indexOf(':')
 					if (name.charCodeAt(w) === 58) { // ':'
 						if (w = nsmatrix[name.substring(0, w)]) {
 							res[w + name.substr(w)] = attr_list[i];
