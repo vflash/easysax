@@ -219,9 +219,10 @@ function easySAXParser(strict) {
 		, name, value, ok
 		, j, w, nn, n
 		, hasNewMatrix
-		, alias, newalias, pz
+		, alias, newalias
 		; 
 
+		aa: 
 		for(; i < l; i++) {
 			w = s.charCodeAt(i);
 
@@ -326,15 +327,17 @@ function easySAXParser(strict) {
 					continue;
 				};
 
-				w = name.indexOf(':');
-				if (w !== -1) {
-					if (w = nsmatrix[name.substring(0, w)] ) {
-						res[w + name.substr(w)] = value;
+				w = name.length;
+				while(w--) {
+					if (name.charCodeAt(w) === 58) { // ':'
+						if (w = nsmatrix[name.substring(0, w)] ) {
+							res[w + name.substr(w)] = value;
+						};
+						continue aa;
+
+						// 'xml:base' ???
 					};
-				} else {
-					res[name] = value;
 				};
-				continue;
 			};
 
 			res[name] = value;
@@ -347,17 +350,22 @@ function easySAXParser(strict) {
 		
 
 		if (hasSurmiseNS)  {
+			bb: 
 			for (i = 0, l = attr_list.length; i < l; i++) {
 				name = attr_list[i++];
 
-				w = name.indexOf(':');
-				if (w !== -1) {
-					if (w = nsmatrix[name.substring(0, w)]) {
-						res[w + name.substr(w)] = attr_list[i];
+				w = name.length;
+				while(w--) { // name.indexOf(':')
+					if (name.charCodeAt(w) === 58) { // ':'
+						if (w = nsmatrix[name.substring(0, w)]) {
+							res[w + name.substr(w)] = attr_list[i];
+						};
+						continue bb;
+						break;
 					};
-				} else {
-					res[name] = attr_list[i];
 				};
+				
+				res[name] = attr_list[i];
 			};
 		};
 		
