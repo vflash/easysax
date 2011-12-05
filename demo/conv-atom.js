@@ -69,13 +69,13 @@ var atomParser = new function() {
 
 	function onStartNode(elem, attr, uq, str, tagend){
 		var unid = unidnext++, v;
-		var attrs = attr();
+		//var attrs = attr();  // --all
 
 		unidstack.push(unid);
 		cnxStack.push(context);
 
 		if (context === 'XHTML') {
-			if (elem === 'script') {
+			if (elem === 'xhtml:script') {
 				context = null;
 				return;
 			};
@@ -86,31 +86,32 @@ var atomParser = new function() {
 
 
 		if (!context || context === 'TEXT') return;
+		
 
 
 		switch(context) {
 			//case 'TEXT': return;
 
 			case 'root':
-				if (elem === 'feed') {
+				if (elem === 'atom:feed') {
 					unids.root = unid;
 					return;
 				};
 
 
-				if (elem === 'title') {
+				if (elem === 'atom:title') {
 					context = 'TEXT';
 					unids.rootTitle = unid;
 					return;
 				};
 				
-				if (elem === 'link' && attr().type == 'text/html') {
+				if (elem === 'atom:link' && attr().type == 'text/html') {
 					feed.link = attr().href;
 					context = null;
 					return;
 				};
 
-				if (elem === 'entry') {
+				if (elem === 'atom:entry') {
 					unids.item = unid;
 					context = 'item';
 					return;
@@ -118,39 +119,39 @@ var atomParser = new function() {
 				break;
 
 			case 'item':
-				if (elem === 'title') {
+				if (elem === 'atom:title') {
 					unids.itemTitle = unid;
 					context = 'TEXT';
 					return;
 				};
 				
-				if (elem === 'content' && attr().type == 'xhtml') {
+				if (elem === 'atom:content' && attr().type == 'xhtml') {
 					unids.itemDescriptionXHTML = unid;
 					context = 'XHTML';	
 					return;
 				};
 
-				if (elem === 'link' && attr().type == 'text/html') {
+				if (elem === 'atom:link' && attr().type == 'text/html') {
 					item.link = attr().href;
 					context = null;
 					return;
 				};
 				
 
-				if ((elem === 'content' || elem === 'summary') && attr().type == 'html') {
+				if ((elem === 'atom:content' || elem === 'atom:summary') && attr().type == 'html') {
 					context = 'TEXT';	
 					unids.itemDescription = unid;
 					return
 				};
 
-				if (elem === 'published') {
+				if (elem === 'atom:published') {
 					unids.itemPublished = unid;
 					context = 'TEXT';
 					return;
 					
 				};
 				
-				if (elem === 'id') {
+				if (elem === 'atom:id') {
 					unids.itemID = unid;
 					context = 'TEXT';
 					return;
@@ -229,6 +230,12 @@ var atomParser = new function() {
 	};
 
 	var parser = new EasySax();
+
+	parser.ns('atom', {
+		'http://www.w3.org/2005/Atom': 'atom',
+		//'http://search.yahoo.com/mrss/': 'media',
+		'http://www.w3.org/1999/xhtml': 'xhtml'
+	});
 
 	parser.on('error', onError);
 	parser.on('startNode', onStartNode);

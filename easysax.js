@@ -305,13 +305,15 @@ function EasySAXParser(strict) {
 						alias = useNS[unEntities(value)];
 
 						if (alias) {
-							if (!hasNewMatrix && nsmatrix[newalias] !== alias) {
-								hasNewMatrix = true;
-								nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
-								nsmatrix = nn;
-							};
+							if (nsmatrix[newalias] !== alias) {
+								if (!hasNewMatrix) {
+									hasNewMatrix = true;
+									nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
+									nsmatrix = nn;
+								};
 
-							nsmatrix[newalias] = alias;
+								nsmatrix[newalias] = alias;
+							};
 						} else {
 							if (nsmatrix[newalias]) {
 								if (!hasNewMatrix) {

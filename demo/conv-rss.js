@@ -69,30 +69,30 @@ var rssParser = new function() {
 			
 
 			case 'root':
-				if (elem === 'rss') {
+				if (elem === 'rss:rss') {
 					unids.root = unid;
 					return;
 				};
 				
-				if (elem === 'channel') {
+				if (elem === 'rss:channel') {
 					return;
 				};
 
 
-				if (elem === 'item') {
+				if (elem === 'rss:item') {
 					unids.item = unid;
 					context = 'item';
 					isPermaLink = false;
 					return;
 				};
 				
-				if (elem === 'title') {
+				if (elem === 'rss:title') {
 					context = 'TEXT';
 					unids.rootTitle = unid;
 					return;
 				};
 				
-				if (elem === 'link') {
+				if (elem === 'rss:link') {
 					context = 'TEXT';
 					unids.rootLink = unid;
 					return;
@@ -102,32 +102,32 @@ var rssParser = new function() {
 
 			case 'item':
 				
-				if (elem === 'title') {
+				if (elem === 'rss:title') {
 					unids.itemTitle = unid;
 					context = 'TEXT';
 					return;
 				};
 				
-				if (elem === 'link') {
+				if (elem === 'rss:link') {
 					unids.itemLink = unid;
 					context = 'TEXT';
 					return;
 				};
 				
-				if (elem === 'description') {
+				if (elem === 'rss:description') {
 					unids.itemDescription = unid;
 					context = 'TEXT';
 					return;
 				};
 
-				if (elem === 'pubDate') {
+				if (elem === 'rss:pubDate') {
 					unids.itemPubDate = unid;
 					context = 'TEXT';
 					return;
 					
 				};
 
-				if (elem === 'guid') {
+				if (elem === 'rss:guid') {
 					
 					
 					unids.itemID = unid;
@@ -226,6 +226,11 @@ var rssParser = new function() {
 
 
 	var parser = new EasySax();
+
+	parser.ns('rss', {
+		//'http://search.yahoo.com/mrss/': 'media',
+		'http://purl.org/rss/1.0/': 'rss'
+	});
 
 	parser.on('error', null);
 	parser.on('startNode', onStartNode);
