@@ -5,7 +5,7 @@ BENCHMARK
 benchmark/test.js, parse file #1
 ---------------------------------------------------
 saxjs: 12671ms
-libxml: 11311ms
+libxmljs: 11311ms
 expat: 6118ms
 expat buffer: 5278ms
 easysax : 1739ms  //  namespace--on, attr()--on , entity_decode--on
@@ -17,7 +17,7 @@ easysax: 740ms    //  namespace--off, attr()--off , entity_decode--off
 benchmark/test.js, parse file #2 (много атрибутов)
 ---------------------------------------------------
 saxjs: 84060ms
-libxml: 48919ms
+libxmljs: 48919ms
 expat: 39444ms
 expat buffer: 35375ms
 easysax: 14655ms  //  namespace--on, attr()--on , entity_decode--on
