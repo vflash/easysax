@@ -189,9 +189,9 @@ function EasySAXParser(strict) {
 	function unEntities(s, i) {
 		s = String(s);
 		if (s.length > 3 && s.indexOf('&') !== -1) {
-			if (s.indexOf('&gt;') !== -1) s = s.replace(/&gt;/ig, '>');
-			if (s.indexOf('&lt;') !== -1) s = s.replace(/&lt;/ig, '<');
-			if (s.indexOf('&quot;') !== -1) s = s.replace(/&quot;/ig, '"');
+			if (s.indexOf('&gt;') !== -1) s = s.replace(/&gt;/g, '>');
+			if (s.indexOf('&lt;') !== -1) s = s.replace(/&lt;/g, '<');
+			if (s.indexOf('&quot;') !== -1) s = s.replace(/&quot;/g, '"');
 
 			if (s.indexOf('&') !== -1) {
 				s = s.replace(/&#(\d+);|&#x([0123456789abcdef]+);|&(\w+);/ig, rpEntities);
