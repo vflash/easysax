@@ -187,10 +187,11 @@ var atomParser = new function() {
 
 
 			case unids.item:
-				if (item.id) {
-					items.push(item);
+				if (item.guid) {
+					feed.streamed = true;
 				};
 
+				items.push(item);
 				item = {};
 				break;
 
@@ -222,7 +223,7 @@ var atomParser = new function() {
 				break;
 			
 			case unids.itemID:
-				item.id = text;
+				item.guid = text;
 				text = '';
 				break;
 			

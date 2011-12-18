@@ -128,8 +128,6 @@ var rssParser = new function() {
 				};
 
 				if (elem === 'rss:guid') {
-					
-					
 					unids.itemID = unid;
 					context = 'TEXT';
 
@@ -140,7 +138,7 @@ var rssParser = new function() {
 						attrs = false;
 					};
 
-					isPermaLink = attrs.isPermaLink === 'true';
+					isPermaLink = attrs.isPermaLink !== 'false';
 					return;
 				};
 
@@ -173,18 +171,15 @@ var rssParser = new function() {
 				break;
 
 			case unids.item:
-				
-				if (!item.link) {
-					item.link = isPermaLink ? item.id : null
-				} else 
-				if (!item.id) {
-					//item.id = crypto.createHash('md5').update(item.link).digest('hex');
-					item.id = item.link;
+				if (!item.link && isPermaLink && item.guid) {
+					item.link = item.guid;
 				};
 
-				if (item.id) {
-					items.push(item);
+				if (item.guid) {
+					feed.streamed = true;
 				};
+
+				items.push(item);
 
 				item = {};
 				break;
@@ -215,7 +210,7 @@ var rssParser = new function() {
 				break;
 			
 			case unids.itemID:
-				item.id = text;
+				item.guid = text;
 				text = '';
 				break;
 			
