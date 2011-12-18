@@ -82,7 +82,7 @@ function EasySAXParser(strict) {
 
 	var is_strict = false; // более строгий контройль ошибок
 	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onComment, onError, onQuestion;
-	var is_onError, is_onComment, is_Question;
+	var is_onError, is_onComment, is_onQuestion;
 
 	
 	var isNamespace = false, useNS , default_xmlns, xmlns
@@ -394,7 +394,6 @@ function EasySAXParser(strict) {
 		, stacknsmatrix = []
 		, string_node
 		, elem
-		, hasAttr
 		, tagend
 		, tagstart
 		, j = 0, i = 0
@@ -403,6 +402,7 @@ function EasySAXParser(strict) {
 		, stopIndex
 		, stop
 		, _nsmatrix
+		, ok
 		;
 
 		while(j !== -1) {
@@ -430,7 +430,8 @@ function EasySAXParser(strict) {
 			};
 
 			if (j !== i && !stop) {
-				onTextNode(xml.substring(j, i), unEntities);
+				ok = onTextNode(xml.substring(j, i), unEntities);
+				if (ok === false) return;
 			};
 
 			w = xml.charCodeAt(i+1);
@@ -445,7 +446,8 @@ function EasySAXParser(strict) {
 					
 					//x = xml.substring(i+9, j);
 					if (!stop) {
-						onCDATA(xml.substring(i+9, j), false);
+						ok = onCDATA(xml.substring(i+9, j), false);
+						if (ok === false) return;
 					};
 					
 
@@ -457,22 +459,33 @@ function EasySAXParser(strict) {
 				if (w === 45 && xml.charCodeAt(i+3) === 45) { // 45 == "-"
 					j = xml.indexOf('-->', i);
 					if (j === -1) {
-						error('comment');
+						error('expected -->');
 						return;
 					};
 
 
 					if (is_onComment && !stop) {
-						onComment(xml.substring(i+4, j), unEntities);
+						ok = onComment(xml.substring(i+4, j), unEntities);
+						if (ok === false) return;
 					};
 
 					j += 3;
 					continue;
 				};
 
-				// error
-				error('<!...>'); // неизвестно что
-				return;
+				j = xml.indexOf('>', i+1);
+				if (j === -1) {
+					error('expected ">"');
+					return;
+				};
+
+				if (is_onAttention && !stop) {
+					ok = onComment(xml.substring(i, j+1), unEntities);
+					if (ok === false) return;
+				};
+
+				j += 1;
+				continue;
 
 			} else 
 			if (w === 63) { // "?"
@@ -482,8 +495,9 @@ function EasySAXParser(strict) {
 					return;
 				};
 				
-				if (is_Question) {
-					onQuestion(false, false, xml.substring(i, j+2));
+				if (is_onQuestion) {
+					ok = onQuestion(xml.substring(i, j+2));
+					if (ok === false) return;
 				};
 
 				j += 2;
@@ -536,7 +550,7 @@ function EasySAXParser(strict) {
 
 				if (w===32 || (w<14 && w > 8)) { // \f\n\r\t\v пробел
 					elem = x.substring(0, q)
-					attr_res = u; // возможно есть атирибуты
+					attr_res = null; // возможно есть атирибуты
 					break;
 				};
 
@@ -613,7 +627,7 @@ function EasySAXParser(strict) {
 						};
 					} else {
 						stopIndex = 1;
-						attr_res = u;
+						attr_res = null;
 					};
 
 					j += 1;
@@ -627,13 +641,16 @@ function EasySAXParser(strict) {
 				attr_string = x;
 				attr_posstart = q;
 
-				onStartNode(elem, getAttrs, unEntities, string_node, tagend);
-				attr_res = u;
+				ok = onStartNode(elem, getAttrs, unEntities, string_node, tagend);
+				if (ok === false) return;
+
+				attr_res = null;
 			};
 
 			
 			if (tagend) {
-				onEndNode(elem, unEntities, string_node, tagstart); //, unEntities
+				ok = onEndNode(elem, unEntities, string_node, tagstart); //, unEntities
+				if (ok === false) return;
 
 				if (isNamespace) {
 					if (tagstart) {
