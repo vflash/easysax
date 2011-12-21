@@ -241,7 +241,7 @@ function EasySAXParser(strict) {
 			for(j = i + 1; j < l; j++) {
 				w = s.charCodeAt(j);
 
-				if ( w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 ) {
+				if ( w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 || w === 45) {
 					continue;
 				};
 
@@ -500,11 +500,11 @@ function EasySAXParser(strict) {
 			if (!stop) {
 				string_node = xml.substring(i, j+1);
 			};
-			
 
 			if (xml.charCodeAt(i+1) === 47) { // </...
 				x = elem = xml.substring(i+2, j);
 				w = x.charCodeAt(0);
+				
 
 				tagstart = false;
 				tagend = true;
@@ -530,7 +530,7 @@ function EasySAXParser(strict) {
 			for(q = 1, y = x.length; q < y; q++) {
 				w = x.charCodeAt(q);
 				
-				if ( w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 ) {
+				if ( w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 || w ===45) {
 					continue;
 				};
 
