@@ -146,6 +146,8 @@ function EasySAXParser(strict) {
 		} else {
 			parse(xml);
 		};
+
+		attr_res = null;
 	};
 
 	// -----------------------------------------------------
@@ -208,7 +210,7 @@ function EasySAXParser(strict) {
 
 
 	function getAttrs() {
-		if (attr_res !== u) return attr_res;
+		if (attr_res != null) return attr_res;
 
 		var u
 		, res = {}
