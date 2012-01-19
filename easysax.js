@@ -81,8 +81,8 @@ function EasySAXParser(strict) {
 	function nullFunc() {};
 
 	var is_strict = false; // более строгий контройль ошибок
-	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onComment, onError, onQuestion;
-	var is_onError, is_onComment, is_onQuestion;
+	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onComment, onError, onQuestion, onAttention;
+	var is_onError, is_onComment, is_onQuestion, is_onAttention;
 
 	
 	var isNamespace = false, useNS , default_xmlns, xmlns
@@ -101,10 +101,10 @@ function EasySAXParser(strict) {
 			case 'endNode': onEndNode = cb; break;
 			case 'textNode': onTextNode = cb; break;
 			case 'cdata': onCDATA = cb; break;
-			case 'comment': onComment = cb; is_onComment = !!cb; break;
 
-			case 'question': break; // <? ....  ?>
-			case 'attention': break; // <!XXXXX zzzz="eeee">
+			case 'comment': onComment = cb; is_onComment = !!cb; break;
+			case 'question': onQuestion = cb; is_onQuestion = !!cb; break; // <? ....  ?>
+			case 'attention': onAttention = cb; is_onAttention = !!cb; break; // <!XXXXX zzzz="eeee">
 			
 		}; 
 	};
@@ -482,7 +482,7 @@ function EasySAXParser(strict) {
 				};
 
 				if (is_onAttention && !stop) {
-					ok = onComment(xml.substring(i, j+1), unEntities);
+					ok = onAttention(xml.substring(i, j+1), unEntities);
 					if (ok === false) return;
 				};
 
