@@ -125,11 +125,6 @@ var atomParser = new function() {
 					return;
 				};
 				
-				if (elem === 'atom:content' && attr().type == 'xhtml') {
-					unids.itemDescriptionXHTML = unid;
-					context = 'XHTML';	
-					return;
-				};
 
 				if (elem === 'atom:link' && attr().type == 'text/html') {
 					item.link = attr().href;
@@ -138,11 +133,24 @@ var atomParser = new function() {
 				};
 				
 
+				if (elem === 'atom:content' && attr().type == 'xhtml') {
+					unids.itemDescriptionXHTML = unid;
+					context = 'XHTML';	
+					return;
+				};
+
 				if ((elem === 'atom:content' || elem === 'atom:summary') && attr().type == 'html') {
 					context = 'TEXT';	
 					unids.itemDescription = unid;
 					return
 				};
+
+				if (elem === 'atom:summary' && (attr().type === 'text' || !attr().type) ) {
+					context = 'TEXT';	
+					unids.itemSummaryText = unid;
+					return;
+				};
+
 
 				if (elem === 'atom:published') {
 					unids.itemPublished = unid;
@@ -150,7 +158,7 @@ var atomParser = new function() {
 					return;
 					
 				};
-				
+
 				if (elem === 'atom:id') {
 					unids.itemID = unid;
 					context = 'TEXT';
@@ -163,6 +171,8 @@ var atomParser = new function() {
 
 		context = null;
 	};
+
+	function html_entities(a) {return ecm[a]};
 
 	function onEndNode(elem, uq, str, tagstart){
 
@@ -208,6 +218,11 @@ var atomParser = new function() {
 			
 			case unids.itemDescription:
 				item.desc = text.substring(0, 70);
+				text = '';
+				break;
+
+			case unids.itemSummaryText:
+				if (!item.desc) item.desc = String(text).replace(/[&<>]/g, html_entities);
 				text = '';
 				break;
 
