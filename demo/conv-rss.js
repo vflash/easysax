@@ -121,6 +121,12 @@ var rssParser = new function() {
 					return;
 				};
 
+				if (elem === 'content:encoded') {  // yandex бля
+					unids.itemContentEncoded = unid;
+					context = 'TEXT';
+					return;
+				};
+
 				if (elem === 'rss:pubDate') {
 					unids.itemPubDate = unid;
 					context = 'TEXT';
@@ -200,6 +206,12 @@ var rssParser = new function() {
 				text = '';
 				break;
 
+			case unids.itemContentEncoded: // yandex бля
+				if (!item.desc) item.desc = text;
+				text = '';
+				break;
+
+
 			case unids.itemPubDate:
 				x = +new Date(text);
 				//if (x != x) x = +new Date();
@@ -227,6 +239,7 @@ var rssParser = new function() {
 		//'http://search.yahoo.com/mrss/': 'media',
 		'http://purl.org/rss/1.0/': 'rss',
 		'http://www.w3.org/1999/02/22-rdf-syntax-ns#' : 'rdf',
+		'http://purl.org/rss/1.0/modules/content/': 'content',
 		'http://backend.userland.com/rss2': 'rss'
 	});
 
