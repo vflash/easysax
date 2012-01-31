@@ -614,7 +614,9 @@ function EasySAXParser(strict) {
 				w = elem.indexOf(':'); 
 				if (w !== -1) {
 					xmlns = nsmatrix[elem.substring(0, w)];
-					elem = elem.substr(w);
+					elem = elem.substr(w+1);
+					
+					
 				} else {
 					xmlns = nsmatrix.xmlns;
 				};
@@ -636,7 +638,7 @@ function EasySAXParser(strict) {
 					continue;
 				};
 
-				elem = nsmatrix.xmlns + ':' + elem;
+				elem = xmlns + ':' + elem;
 			};
 
 			if (tagstart) { // is_onStartNode

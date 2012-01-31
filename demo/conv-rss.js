@@ -69,7 +69,8 @@ var rssParser = new function() {
 			
 
 			case 'root':
-				if (elem === 'rss:rss') {
+				if (elem === 'rss:rss' || elem === 'rdf:RDF') {
+				//if (elem === 'rss:rss') {
 					unids.root = unid;
 					return;
 				};
@@ -224,7 +225,9 @@ var rssParser = new function() {
 
 	parser.ns('rss', {
 		//'http://search.yahoo.com/mrss/': 'media',
-		'http://purl.org/rss/1.0/': 'rss'
+		'http://purl.org/rss/1.0/': 'rss',
+		'http://www.w3.org/1999/02/22-rdf-syntax-ns#' : 'rdf',
+		'http://backend.userland.com/rss2': 'rss'
 	});
 
 	parser.on('error', null);
