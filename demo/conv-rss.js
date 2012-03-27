@@ -58,8 +58,6 @@ var rssParser = new function() {
 
 		unidstack.push(unid);
 		cnxStack.push(context);
-		
-		
 
 		if (!context) return;
 
@@ -126,8 +124,9 @@ var rssParser = new function() {
 					context = 'TEXT';
 					return;
 				};
+				
 
-				if (elem === 'rss:pubDate') {
+				if (elem === 'rss:pubDate' || elem === 'dc:date') {
 					unids.itemPubDate = unid;
 					context = 'TEXT';
 					return;
@@ -168,12 +167,12 @@ var rssParser = new function() {
 				break;
 
 			case unids.rootTitle:
-				feed.title = text;
+				feed.title = String(text).trim();
 				text = '';
 				break;
 			
 			case unids.rootLink:
-				feed.link = text;
+				feed.link = String(text).trim();
 				text = '';
 				break;
 
@@ -202,28 +201,26 @@ var rssParser = new function() {
 				break;
 
 			case unids.itemDescription:
-				item.desc = text;
+				item.desc = String(text).trim();
 				text = '';
 				break;
 
 			case unids.itemContentEncoded: // yandex бля
-				if (!item.desc) item.desc = text;
+				if (!item.desc) item.desc = String(text).trim();
 				text = '';
 				break;
 
 
 			case unids.itemPubDate:
-				x = +new Date(text);
-				//if (x != x) x = +new Date();
+				x = Math.floor(+new Date(text)/1000);
 				if (x != x) x = null;
 
-				item.utime = Math.floor(x/1000);
-
+				item.utime = x;
 				text = '';
 				break;
 			
 			case unids.itemID:
-				item.guid = text;
+				item.guid = String(text).trim();
 				text = '';
 				break;
 			
@@ -238,6 +235,7 @@ var rssParser = new function() {
 	parser.ns('rss', {
 		//'http://search.yahoo.com/mrss/': 'media',
 		'http://purl.org/rss/1.0/': 'rss',
+		'http://purl.org/dc/elements/1.1/': 'dc',
 		'http://www.w3.org/1999/02/22-rdf-syntax-ns#' : 'rdf',
 		'http://purl.org/rss/1.0/modules/content/': 'content',
 		'http://backend.userland.com/rss2': 'rss'

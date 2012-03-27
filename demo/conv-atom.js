@@ -106,7 +106,11 @@ var atomParser = new function() {
 				};
 				
 				if (elem === 'atom:link' && attr().type == 'text/html') {
-					feed.link = attr().href;
+					v = attr();
+					if (v.type === 'text/html' || (!v.type && !feed.link) ) {
+						feed.link = String(v.href).trim();
+					};
+
 					context = null;
 					return;
 				};
@@ -126,12 +130,16 @@ var atomParser = new function() {
 				};
 				
 
-				if (elem === 'atom:link' && attr().type == 'text/html') {
-					item.link = attr().href;
+				if (elem === 'atom:link') {
+					v = attr();
+					if (v.type === 'text/html' || (!v.type && !item.link)) {
+						item.link = String(v.href).trim();
+					};
+
 					context = null;
 					return;
 				};
-				
+
 
 				if (elem === 'atom:content' && attr().type == 'xhtml') {
 					unids.itemDescriptionXHTML = unid;
@@ -191,7 +199,7 @@ var atomParser = new function() {
 				break;
 
 			case unids.rootTitle:
-				feed.title = text;
+				feed.title = String(text).trim();
 				text = '';
 				break;
 
@@ -206,23 +214,24 @@ var atomParser = new function() {
 				break;
 
 			case unids.itemTitle:
-				item.title = text;
+				item.title = String(text).trim();
 				text = '';
 				break;
 
 
 			case unids.itemDescriptionXHTML:
-				item.desc = xhtml;
+				item.desc = String(xhtml).trim();
 				xhtml = '';
 				break;
 			
 			case unids.itemDescription:
-				item.desc = text.substring(0, 70);
+				//item.desc = text.substring(0, 70);
+				item.desc = String(text).trim();
 				text = '';
 				break;
 
 			case unids.itemSummaryText:
-				if (!item.desc) item.desc = String(text).replace(/[&<>]/g, html_entities);
+				if (!item.desc) item.desc = String(text).trim().replace(/[&<>]/g, html_entities);
 				text = '';
 				break;
 
@@ -238,7 +247,7 @@ var atomParser = new function() {
 				break;
 			
 			case unids.itemID:
-				item.guid = text;
+				item.guid = String(text).trim();
 				text = '';
 				break;
 			
