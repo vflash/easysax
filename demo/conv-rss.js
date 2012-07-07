@@ -124,7 +124,12 @@ var rssParser = new function() {
 					context = 'TEXT';
 					return;
 				};
-				
+
+				if (elem === 'yandex:full-text') {  // yandex бля
+					unids.itemYandexFullText = unid;
+					context = 'TEXT';
+					return;
+				};
 
 				if (elem === 'rss:pubDate' || elem === 'dc:date') {
 					unids.itemPubDate = unid;
@@ -201,12 +206,13 @@ var rssParser = new function() {
 				break;
 
 			case unids.itemDescription:
-				item.desc = String(text).trim();
-				text = '';
-				break;
-
 			case unids.itemContentEncoded: // yandex бля
-				if (!item.desc) item.desc = String(text).trim();
+			case unids.itemYandexFullText: // yandex бля
+				text = String(text).trim();
+				if (!item.desc || item.desc.length < text.length) {
+					item.desc = text;
+				};
+
 				text = '';
 				break;
 
