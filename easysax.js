@@ -65,26 +65,21 @@
 
 
 
+if (typeof exports === 'object' && this == exports) {
+	module.exports = EasySAXParser;
+};
 
 
-
-
-
-
-
-
-function EasySAXParser(strict) {
+function EasySAXParser() {
 	'use strict';
 
 	if (!this) return null;
 
 	function nullFunc() {};
 
-	var is_strict = false; // более строгий контройль ошибок
-	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onComment, onError, onQuestion, onAttention;
-	var is_onError, is_onComment, is_onQuestion, is_onAttention;
+	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onError = nullFunc, onComment, onQuestion, onAttention;
+	var is_onComment, is_onQuestion, is_onAttention;
 
-	
 	var isNamespace = false, useNS , default_xmlns, xmlns
 	, nsmatrix = {xmlns: xmlns}
 	, hasSurmiseNS = false
@@ -96,11 +91,11 @@ function EasySAXParser(strict) {
 		};
 
 		switch(name) {
-			case 'error': onError = cb; is_onError = !!cb; break;
-			case 'startNode': onStartNode = cb; break;
-			case 'endNode': onEndNode = cb; break;
-			case 'textNode': onTextNode = cb; break;
-			case 'cdata': onCDATA = cb; break;
+			case 'error': onError = cb || nullFunc; break;
+			case 'startNode': onStartNode = cb || nullFunc; break;
+			case 'endNode': onEndNode = cb || nullFunc; break;
+			case 'textNode': onTextNode = cb || nullFunc; break;
+			case 'cdata': onCDATA = cb || nullFunc; break;
 
 			case 'comment': onComment = cb; is_onComment = !!cb; break;
 			case 'question': onQuestion = cb; is_onQuestion = !!cb; break; // <? ....  ?>
@@ -206,8 +201,14 @@ function EasySAXParser(strict) {
 	var attr_string; // = ''
 	var attr_posstart; // = 0
 	var attr_res;
-	var attr_error = is_strict ?  null : false;
 
+	/*
+		парсит атрибуты по требованию. Важно! - функция не генерирует исключения.
+
+		если была ошибка разбора возврашается false
+		если атрибутов нет и разбор удачен то возврашается true
+		если есть атрибуты то возврашается обьект(хеш)
+	*/
 
 	function getAttrs() {
 		if (attr_res != null) return attr_res;
@@ -235,7 +236,7 @@ function EasySAXParser(strict) {
 			if (w < 65 || w >122 || (w<97 && w>90) ) { // ожидаем символ
 				// error. invalid char
 				//console.log('error 1')
-				return attr_res = attr_error;
+				return attr_res = false;
 			};
 
 			ok = false;
@@ -250,7 +251,7 @@ function EasySAXParser(strict) {
 				if (w !== 61) { // "=" == 61
 					// console.log('error 2');
 					// error. invalid char
-					return attr_res = attr_error;
+					return attr_res = false; // 
 				};
 				
 				name = s.substring(i, j);
@@ -264,13 +265,13 @@ function EasySAXParser(strict) {
 				} else {  // "'"
 					// error. invalid char
 					//console.log('error 2')
-					return attr_res = attr_error;
+					return attr_res = false;
 				};
 
 				if (j === -1) {
 					// error. invalid char
 					//console.log('error 3')
-					return attr_res = attr_error;
+					return attr_res = false;
 				};
 
 
@@ -280,7 +281,7 @@ function EasySAXParser(strict) {
 					if (w > 32 || w < 9 || (w<32 && w>13)) {
 						// error. invalid char
 						//console.log('error 4')
-						return attr_res = attr_error;
+						return attr_res = false;
 					};
 				};
 
@@ -295,7 +296,7 @@ function EasySAXParser(strict) {
 			if (!ok || name === 'xmlns:xmlns') {
 				// console.log('error 6')
 				// error. invalid char
-				return attr_res = attr_error;
+				return attr_res = false;
 			};
 
 
@@ -354,12 +355,13 @@ function EasySAXParser(strict) {
 
 
 		if (!ok) {
-			return attr_res = false;
+			return attr_res = true;  // атрибутов нет, ошибок тоже нет
 		};
 		
 
 		if (hasSurmiseNS)  {
 			bb: 
+
 			for (i = 0, l = attr_list.length; i < l; i++) {
 				name = attr_list[i++];
 
@@ -380,13 +382,6 @@ function EasySAXParser(strict) {
 		
 		return attr_res = res;
 	};
-	
-	function error(msg) {
-		if (is_onError) {
-			onError(msg);
-		};
-	};
-
 
 	
 	// xml - string
@@ -417,14 +412,9 @@ function EasySAXParser(strict) {
 			};
 
 			if (i === -1) { // конец разбора
-				//j = -1;
-				if (is_strict) {
-					// проверить что дальше нет символов
-					// if (true) error(1)
-				};
 
 				if (nodestack.length) {
-					error('end file');
+					onError('end file');
 					return;
 				};
 
@@ -442,7 +432,7 @@ function EasySAXParser(strict) {
 				if (w === 91 && xml.substr(i+3, 6) === 'CDATA[') { // 91 == "["
 					j = xml.indexOf(']]>', i);
 					if (j === -1) {
-						error('cdata');
+						onError('cdata');
 						return;
 					};
 					
@@ -461,7 +451,7 @@ function EasySAXParser(strict) {
 				if (w === 45 && xml.charCodeAt(i+3) === 45) { // 45 == "-"
 					j = xml.indexOf('-->', i);
 					if (j === -1) {
-						error('expected -->');
+						onError('expected -->');
 						return;
 					};
 
@@ -477,7 +467,7 @@ function EasySAXParser(strict) {
 
 				j = xml.indexOf('>', i+1);
 				if (j === -1) {
-					error('expected ">"');
+					onError('expected ">"');
 					return;
 				};
 
@@ -493,7 +483,7 @@ function EasySAXParser(strict) {
 			if (w === 63) { // "?"
 				j = xml.indexOf('?>', i);
 				if (j === -1) { // error
-					error('...?>');
+					onError('...?>');
 					return;
 				};
 				
@@ -509,7 +499,7 @@ function EasySAXParser(strict) {
 			j = xml.indexOf('>', i+1);
 			
 			if (j == -1) { // error 
-				error('...>');
+				onError('...>');
 				return;
 			};
 
@@ -538,7 +528,7 @@ function EasySAXParser(strict) {
 			};
 			
 			if ( !(w > 96  && w < 123 || w > 64 && w <91) ) {
-				error('first char nodeName');
+				onError('first char nodeName');
 				return;
 			};
 
@@ -556,7 +546,7 @@ function EasySAXParser(strict) {
 					break;
 				};
 
-				error('invalid nodeName');
+				onError('invalid nodeName');
 				return;
 			};
 
@@ -564,7 +554,7 @@ function EasySAXParser(strict) {
 			if (tagend) {
 				if (!tagstart) {
 					if (nodestack.pop() !== elem) {
-						error('close tag');
+						onError('close tag');
 						return;
 					};
 				};
@@ -671,9 +661,6 @@ function EasySAXParser(strict) {
 };
 
 
-if (typeof exports === 'object' && this == exports) {
-	module.exports = EasySAXParser;
-};
 
 
 
