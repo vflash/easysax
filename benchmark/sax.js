@@ -51,7 +51,8 @@ function SAXParser (strict, opt) {
   parser.q = parser.c = ""
   parser.bufferCheckPosition = sax.MAX_BUFFER_LENGTH
   parser.opt = opt || {}
-  parser.tagCase = parser.opt.lowercasetags ? "toLowerCase" : "toUpperCase"
+  parser.opt.lowercase = parser.opt.lowercase || parser.opt.lowercasetags;
+  parser.looseCase = parser.opt.lowercase ? "toLowerCase" : "toUpperCase"
   parser.tags = []
   parser.closed = parser.closedRoot = parser.sawRoot = false
   parser.tag = parser.error = null
@@ -67,7 +68,10 @@ function SAXParser (strict, opt) {
   if (parser.opt.xmlns) parser.ns = Object.create(rootNS)
 
   // mostly just for error reporting
-  parser.position = parser.line = parser.column = 0
+  parser.trackPosition = parser.opt.position !== false
+  if (parser.trackPosition) {
+    parser.position = parser.line = parser.column = 0
+  }
   emit(parser, "onready")
 }
 
@@ -134,7 +138,6 @@ SAXParser.prototype =
   , write: write
   , resume: function () { this.error = null; return this }
   , close: function () { return this.write(null) }
-  , end: function () { return this.write(null) }
   }
 
 try {
@@ -234,14 +237,37 @@ var whitespace = "\r\n\t "
   , nameBody = nameStart+number+"-."
   , quote = "'\""
   , entity = number+letter+"#"
+  , attribEnd = whitespace + ">"
   , CDATA = "[CDATA["
   , DOCTYPE = "DOCTYPE"
   , XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace"
   , XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/"
   , rootNS = { xml: XML_NAMESPACE, xmlns: XMLNS_NAMESPACE }
 
-function is (charclass, c) { return charclass.indexOf(c) !== -1 }
-function not (charclass, c) { return !is(charclass, c) }
+// turn all the string character sets into character class objects.
+whitespace = charClass(whitespace)
+number = charClass(number)
+letter = charClass(letter)
+nameStart = charClass(nameStart)
+nameBody = charClass(nameBody)
+quote = charClass(quote)
+entity = charClass(entity)
+attribEnd = charClass(attribEnd)
+
+function charClass (str) {
+  return str.split("").reduce(function (s, c) {
+    s[c] = true
+    return s
+  }, {})
+}
+
+function is (charclass, c) {
+  return charclass[c]
+}
+
+function not (charclass, c) {
+  return !charclass[c]
+}
 
 var S = 0
 sax.STATE =
@@ -318,9 +344,11 @@ function textopts (opt, text) {
 
 function error (parser, er) {
   closeText(parser)
-  er += "\nLine: "+parser.line+
-        "\nColumn: "+parser.column+
-        "\nChar: "+parser.c
+  if (parser.trackPosition) {
+    er += "\nLine: "+parser.line+
+          "\nColumn: "+parser.column+
+          "\nChar: "+parser.c
+  }
   er = new Error(er)
   parser.error = er
   emit(parser, "onerror", er)
@@ -342,7 +370,7 @@ function strictFail (parser, message) {
 }
 
 function newTag (parser) {
-  if (!parser.strict) parser.tagName = parser.tagName[parser.tagCase]()
+  if (!parser.strict) parser.tagName = parser.tagName[parser.looseCase]()
   var parent = parser.tags[parser.tags.length - 1] || parser
     , tag = parser.tag = { name : parser.tagName, attributes : {} }
 
@@ -367,6 +395,7 @@ function qname (name) {
 }
 
 function attrib (parser) {
+  if (!parser.strict) parser.attribName = parser.attribName[parser.looseCase]()
   if (parser.opt.xmlns) {
     var qn = qname(parser.attribName)
       , prefix = qn.prefix
@@ -434,6 +463,8 @@ function openTag (parser, selfClosing) {
     }
 
     // handle deferred onattribute events
+    // Note: do not apply default ns to attributes:
+    //   http://www.w3.org/TR/REC-xml-names/#defaulting
     for (var i = 0, l = parser.attribList.length; i < l; i ++) {
       var nv = parser.attribList[i]
       var name = nv[0]
@@ -441,7 +472,7 @@ function openTag (parser, selfClosing) {
         , qualName = qname(name)
         , prefix = qualName.prefix
         , local = qualName.local
-        , uri = tag.ns[prefix] || ""
+        , uri = prefix == "" ? "" : (tag.ns[prefix] || "")
         , a = { name: name
               , value: value
               , prefix: prefix
@@ -491,7 +522,7 @@ function closeTag (parser) {
   // <a><b></c></b></a> will close everything, otherwise.
   var t = parser.tags.length
   var tagName = parser.tagName
-  if (!parser.strict) tagName = tagName[parser.tagCase]()
+  if (!parser.strict) tagName = tagName[parser.looseCase]()
   var closeTo = tagName
   while (t --) {
     var close = parser.tags[t]
@@ -565,11 +596,13 @@ function write (chunk) {
   if (chunk === null) return end(parser)
   var i = 0, c = ""
   while (parser.c = c = chunk.charAt(i++)) {
-    parser.position ++
-    if (c === "\n") {
-      parser.line ++
-      parser.column = 0
-    } else parser.column ++
+    if (parser.trackPosition) {
+      parser.position ++
+      if (c === "\n") {
+        parser.line ++
+        parser.column = 0
+      } else parser.column ++
+    }
     switch (parser.state) {
 
       case S.BEGIN:
@@ -579,7 +612,7 @@ function write (chunk) {
           // weird, but happens.
           strictFail(parser, "Non-whitespace before first tag.")
           parser.textNode = c
-          state = S.TEXT
+          parser.state = S.TEXT
         }
       continue
 
@@ -588,7 +621,7 @@ function write (chunk) {
           var starti = i-1
           while (c && c!=="<" && c!=="&") {
             c = chunk.charAt(i++)
-            if (c) {
+            if (c && parser.trackPosition) {
               parser.position ++
               if (c === "\n") {
                 parser.line ++
@@ -905,7 +938,7 @@ function write (chunk) {
       continue
 
       case S.ATTRIB_VALUE_UNQUOTED:
-        if (not(whitespace+">",c)) {
+        if (not(attribEnd,c)) {
           if (c === "&") parser.state = S.ATTRIB_VALUE_ENTITY_U
           else parser.attribValue += c
           continue
