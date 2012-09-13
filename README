@@ -32,3 +32,6 @@ demo/example.js, parse file #2
 1,000 pages for: 13335ms -  attr()--all
 1,000 pages for: 7300ms  -  attr()--on_request
 
+
+
+Парсер был написан для RSS ридера http://zz7a.com , скоро год как в боевом тестировании.
