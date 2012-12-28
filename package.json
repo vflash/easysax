@@ -1,8 +1,8 @@
 {
 	"name" : "easysax",
 	"description": "pure javascript xml parser",
-	"keywords": "xml, sax",
-	"version": "0.1.9",
+	"keywords": ["xml", "sax", "parser", "pure"],
+	"version": "0.1.10",
 	"main" : "./easysax.js",
 
 	"bugs": {
