@@ -248,7 +248,7 @@ function EasySAXParser() {
 				continue
 			};
 
-			if (w < 65 || w >122 || (w<97 && w>90) ) { // ожидаем символ
+			if (w < 65 || w >122 || (w>90 && w<95 ||  w === 96) ) { // ожидаем символ
 				// error. invalid char
 				//console.log('error attr 1')
 				return attr_res = false;
@@ -259,7 +259,7 @@ function EasySAXParser() {
 			for(j = i + 1; j < l; j++) {
 				w = s.charCodeAt(j);
 
-				if ( w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 || w === 45) {
+				if (w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 || w === 45 || w === 95) {
 					continue;
 				};
 
@@ -397,7 +397,6 @@ function EasySAXParser() {
 
 		return attr_res = res;
 	};
-
 
 	// xml - string
 	function parse(xml) {
@@ -567,7 +566,7 @@ function EasySAXParser() {
 					tagend = false;
 				};
 
-				if ( !(w > 96  && w < 123 || w > 64 && w <91) ) {
+				if ( !(w > 96  && w < 123 || w > 64 && w <91 || w === 95) ) {
 					onError('first char nodeName');
 					return;
 				};
@@ -575,7 +574,7 @@ function EasySAXParser() {
 				for(q = 1, y = x.length; q < y; q++) {
 					w = x.charCodeAt(q);
 					
-					if ( w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 || w ===45) {
+					if ( w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 || w ===45 || w === 95) {
 						continue;
 					};
 
@@ -584,7 +583,7 @@ function EasySAXParser() {
 						attr_res = null; // возможно есть атирибуты
 						break;
 					};
-
+	
 					onError('invalid nodeName');
 					return;
 				};

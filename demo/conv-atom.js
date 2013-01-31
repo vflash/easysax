@@ -67,7 +67,7 @@ var atomParser = new function() {
 		};
 	};
 
-	function onStartNode(elem, attr, uq, str, tagend){
+	function onStartNode(elem, attr, uq, tagend, get_str){
 		var unid = unidnext++, v;
 		//var attrs = attr();  // --all
 
@@ -80,7 +80,7 @@ var atomParser = new function() {
 				return;
 			};
 
-			xhtml += str;
+			xhtml += get_str();
 			return;
 		};
 
@@ -182,14 +182,14 @@ var atomParser = new function() {
 
 	function html_entities(a) {return ecm[a]};
 
-	function onEndNode(elem, uq, str, tagstart){
+	function onEndNode(elem, uq, tagstart, get_str){
 
 		var unid = unidstack.pop(unid), x;
 		context = cnxStack.pop(context);
 		//console.log(context)
 
 		if (context === 'XHTML') {
-			if (!tagstart) xhtml += str;
+			if (!tagstart) xhtml += get_str();
 			return;
 		};
 
