@@ -69,7 +69,6 @@ if (typeof exports === 'object' && this == exports) {
 	module.exports = EasySAXParser;
 };
 
-
 function EasySAXParser() {
 	'use strict';
 
@@ -84,6 +83,7 @@ function EasySAXParser() {
 	, nsmatrix = {xmlns: xmlns}
 	, hasSurmiseNS = false
 	;
+
 
 	this.on = function(name, cb) {
 		if (typeof cb !== 'function') {
@@ -210,6 +210,8 @@ function EasySAXParser() {
 		если есть атрибуты то возврашается обьект(хеш)
 	*/
 
+	var RGX_ATTR_NAME = /[^\w:-]+/g;
+
 	function getAttrs() {
 		if (attr_res !== null) {
 			return attr_res;
@@ -248,72 +250,68 @@ function EasySAXParser() {
 				continue
 			};
 
-			if (w < 65 || w >122 || (w>90 && w<95 ||  w === 96) ) { // ожидаем символ
-				// error. invalid char
+			if (w < 65 || w >122 || (w>90 && w<97) ) { // ожидаем символ
 				//console.log('error attr 1')
-				return attr_res = false;
+				return attr_res = false; // error. invalid char
 			};
 
-			ok = false;
-
-			for(j = i + 1; j < l; j++) {
+			for(j = i + 1; j < l; j++) { // проверяем все символы имени атрибута 
 				w = s.charCodeAt(j);
 
-				if (w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 || w === 45 || w === 95) {
+				if ( w>96 && w < 123 || w>64 && w< 91 || w > 47 && w < 59 || w === 45) {
 					continue;
 				};
 
+
 				if (w !== 61) { // "=" == 61
 					//console.log('error 2');
-					// error. invalid char
-					return attr_res = false; // 
-				};
-				
-				name = s.substring(i, j);
-
-				w = s.charCodeAt(j+1);
-				if (w === 34) {  // '"'
-					j = s.indexOf('"', i = j+2 );
-				} else
-				if (w === 39) {
-					j = s.indexOf('\'', i = j+2 );
-				} else {  // "'"
-					// error. invalid char
-					//console.log('error 3')
-					return attr_res = false;
+					return attr_res = false; // error. invalid char
 				};
 
-				if (j === -1) {
-					// error. invalid char
-					//console.log('error 4')
-					return attr_res = false;
-				};
-
-
-				if (j+1 < l) {
-					w = s.charCodeAt(j+1);
-
-					if (w > 32 || w < 9 || (w<32 && w>13)) {
-						// error. invalid char
-						//console.log('error 5')
-						return attr_res = false;
-					};
-				};
-
-
-				value = s.substring(i, j);
-				ok = true;
-
-				i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
 				break;
 			};
 
-			if (!ok || name === 'xmlns:xmlns') {
-				 //console.log('error 6')
-				// error. invalid char
-				return attr_res = false;
+			name = s.substring(i, j);
+
+			if (name === 'xmlns:xmlns') {
+				//console.log('error 6')
+				return attr_res = false; // error. invalid name
 			};
 
+			w = s.charCodeAt(j+1);
+
+			if (w === 34) {  // '"'
+				j = s.indexOf('"', i = j+2 );
+
+			} else {
+				if (w === 39) {
+					j = s.indexOf('\'', i = j+2 );
+
+				} else {  // "'"
+					//console.log('error 3')
+					return attr_res = false; // error. invalid char
+				};
+			};
+
+			if (j === -1) {
+				//console.log('error 4')
+				return attr_res = false; // error. invalid char
+			};
+
+
+			if (j+1 < l) {
+				w = s.charCodeAt(j+1);
+
+				if (w > 32 || w < 9 || (w<32 && w>13)) {
+					// error. invalid char
+					//console.log('error 5')
+					return attr_res = false;
+				};
+			};
+
+
+			value = s.substring(i, j);
+			i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
 
 			if (isNamespace) { // 
 				if (hasSurmiseNS) {
@@ -390,13 +388,14 @@ function EasySAXParser() {
 						break;
 					};
 				};
-				
+
 				res[name] = attr_list[i];
 			};
 		};
 
 		return attr_res = res;
 	};
+
 
 	// xml - string
 	function parse(xml) {
@@ -446,6 +445,7 @@ function EasySAXParser() {
 			};
 
 			w = xml.charCodeAt(i+1);
+
 			if (w === 33) { // "!"
 				w = xml.charCodeAt(i+2);
 				if (w === 91 && xml.substr(i+3, 6) === 'CDATA[') { // 91 == "["
@@ -498,36 +498,35 @@ function EasySAXParser() {
 				j += 1;
 				continue;
 
-			} else 
-			if (w === 63) { // "?"
-				j = xml.indexOf('?>', i);
-				if (j === -1) { // error
-					onError('...?>');
-					return;
-				};
-				
-				if (is_onQuestion) {
-					ok = onQuestion(xml.substring(i, j+2));
-					if (ok === false) return;
-				};
+			} else {
+				if (w === 63) { // "?"
+					j = xml.indexOf('?>', i);
+					if (j === -1) { // error
+						onError('...?>');
+						return;
+					};
+					
+					if (is_onQuestion) {
+						ok = onQuestion(xml.substring(i, j+2));
+						if (ok === false) return;
+					};
 
-				j += 2;
-				continue;
+					j += 2;
+					continue;
+				};
 			};
 
 			j = xml.indexOf('>', i+1);
-			
+
 			if (j == -1) { // error 
 				onError('...>');
 				return;
 			};
 
-
 			attr_res = true; // атрибутов нет
 
-			//if (!stop) string_node = xml.substring(i, j+1);
-
-			if (xml.charCodeAt(i+1) === 47) { // </...
+			//if (xml.charCodeAt(i+1) === 47) { // </...
+			if (w === 47) { // </...
 				tagstart = false;
 				tagend = true;
 
@@ -540,9 +539,9 @@ function EasySAXParser() {
 					onError('close tagname');
 					return;
 				};
-				
+
 				// проверим что в закрываюшем теге нет лишнего
-				for(; q<j; q++) {
+				for(; q < j; q++) {
 					w = xml.charCodeAt(q);
 
 					if (w===32 || (w > 8 && w<14) ) {  // \f\n\r\t\v пробел
@@ -566,15 +565,15 @@ function EasySAXParser() {
 					tagend = false;
 				};
 
-				if ( !(w > 96  && w < 123 || w > 64 && w <91 || w === 95) ) {
+				if ( !(w > 96  && w < 123 || w > 64 && w <91) ) {
 					onError('first char nodeName');
 					return;
 				};
 
 				for(q = 1, y = x.length; q < y; q++) {
 					w = x.charCodeAt(q);
-					
-					if ( w>96 && w < 123 || w > 47 && w < 59 || w>64 && w< 91 || w ===45 || w === 95) {
+
+					if ( w>96 && w < 123 || w>64 && w< 91 || w > 47 && w < 59 || w ===45) {
 						continue;
 					};
 
@@ -583,12 +582,11 @@ function EasySAXParser() {
 						attr_res = null; // возможно есть атирибуты
 						break;
 					};
-	
+
 					onError('invalid nodeName');
 					return;
 				};
 
-				
 				if (!tagend) {
 					nodestack.push(elem);
 				};
