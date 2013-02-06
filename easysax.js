@@ -235,7 +235,8 @@ function EasySAXParser() {
 		, i = attr_posstart
 		, l = s.length
 		, attr_list = hasSurmiseNS ? [] : false
-		, name, value = '', ok
+		, name, value = ''
+		, ok = false
 		, j, w, nn, n
 		, hasNewMatrix
 		, alias, newalias
@@ -272,6 +273,7 @@ function EasySAXParser() {
 			};
 
 			name = s.substring(i, j);
+			ok = true;
 
 			if (name === 'xmlns:xmlns') {
 				//console.log('error 6')
@@ -315,7 +317,7 @@ function EasySAXParser() {
 
 			if (isNamespace) { // 
 				if (hasSurmiseNS) {
-					//var alias, newalias = false;
+					// есть подозрение что в атрибутах присутствует xmlns
 
 					if (newalias = name === 'xmlns' ? 'xmlns' : name.charCodeAt(0) === 120 && name.substr(0, 6) === 'xmlns:' && name.substr(6) ) {
 						alias = useNS[unEntities(value)];
