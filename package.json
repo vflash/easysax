@@ -2,7 +2,7 @@
 	"name" : "easysax",
 	"description": "pure javascript xml parser",
 	"keywords": ["xml", "sax", "parser", "pure"],
-	"version": "0.1.12",
+	"version": "0.1.13",
 	"main" : "./easysax.js",
 
 	"bugs": {
@@ -10,12 +10,12 @@
 	},
 
 	"author":{ 
-		"name" : "Vopilovsky Constantine",
+		"name" : "Vopilovskiy Konstantin",
 		"email" : "flash.vkv@gmail.com",
 		"url" : "http://vflash.ru"
 	},
 	
-	"files":["easysax.js", "LICENSE"],
+	"files":["easysax.js", "LICENSE", "README.md"],
 	
 	"repository": {
 		"type": "git",
