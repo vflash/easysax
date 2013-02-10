@@ -1,4 +1,4 @@
 {
-    "alias": "EasySAXParser",
-    "scripts": ["./easysax.js"]
+	"alias": "EasySAXParser",
+	"scripts": ["./easysax.js"]
 }
