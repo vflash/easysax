@@ -259,7 +259,7 @@ function EasySAXParser() {
 			for(j = i + 1; j < l; j++) { // проверяем все символы имени атрибута 
 				w = s.charCodeAt(j);
 
-				if ( w>96 && w < 123 || w>64 && w< 91 || w > 47 && w < 59 || w === 45) {
+				if ( w>96 && w < 123 || w>64 && w< 91 || w > 47 && w < 59 || w === 45 || w === 95) {
 					continue;
 				};
 
@@ -575,7 +575,7 @@ function EasySAXParser() {
 				for(q = 1, y = x.length; q < y; q++) {
 					w = x.charCodeAt(q);
 
-					if ( w>96 && w < 123 || w>64 && w< 91 || w > 47 && w < 59 || w ===45) {
+					if ( w>96 && w < 123 || w>64 && w< 91 || w > 47 && w < 59 || w === 45 || w === 95) {
 						continue;
 					};
 
