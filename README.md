@@ -44,3 +44,69 @@ easysax: 2954ms   //  namespace--off, attr()--off , entity_decode--off
 1,000 pages for: 13335ms -  attr()--all
 1,000 pages for: 7300ms  -  attr()--on_request
 ```
+
+
+##Пример использования##
+```js
+var parser = new EasySax();
+
+parser.ns('rss', {
+	'http://www.w3.org/2005/Atom': 'atom',
+	'http://www.w3.org/1999/xhtml': 'xhtml',
+
+	'http://search.yahoo.com/mrss/': 'media',
+	'http://purl.org/rss/1.0/': 'rss',
+	'http://purl.org/dc/elements/1.1/': 'dc',
+	'http://www.w3.org/1999/02/22-rdf-syntax-ns#' : 'rdf',
+	'http://purl.org/rss/1.0/modules/content/': 'content',
+	'http://www.yandex.ru': 'yandex',
+	'http://news.yandex.ru': 'yandex',
+	'http://backend.userland.com/rss2': 'rss'
+
+});
+
+
+parser.on('error', function(msg) {
+	// console.log('error - ' + msg);
+});
+
+
+parser.on('startNode', function(elem, attr, uq, str, tagend) {
+	// elem -- (string) название элемента
+	// attr() -- (function) парсит атрибуты и возврашает обьект. 
+	// uq() -- (function) встроенный xml декодер.  пример: uq(&lt;a&gt;)
+	// str -- (string) нераспарсенная строка элемента. пример: <item title="text" id="x345">
+	// tagend -- (boolean) флаг что элемент пустой
+	
+});
+
+parser.on('endNode', function(elem, uq, str, tagstart) {
+	// ...
+});
+
+parser.on('textNode', function(text, uq) {
+	// text -- (String) строковой элемент. пример: uq(text);
+});
+
+parser.on('cdata', function(text) {
+	// text -- (String) строковой элемент CDATA
+});
+
+
+parser.on('comment', function(text) {
+	// text - (String) текст комментария
+});
+
+
+//parser.on('question', function() {}); // <? ... ?>
+//parser.on('attention', function() {}); // <!XXXXX zzzz="eeee">
+
+
+// parser.parse(arg1, arg2)
+// первый аргумент -- (String) строка xml
+// второй аргумент -- пространство имен по умолчанию
+
+parser.parse(xml, 'rss')
+
+```
+
