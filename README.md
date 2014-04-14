@@ -73,7 +73,7 @@ parser.on('error', function(msg) {
 
 
 parser.on('startNode', function(elem, attr, uq, str, tagend) {
-	// elem -- (string) название элемента
+	// elem -- (string) название элемента. при указании пространства имен, то автоматически подставляется префикс
 	// attr() -- (function) парсит атрибуты и возврашает обьект. 
 	// uq() -- (function) встроенный xml декодер.  пример: uq(&lt;a&gt;)
 	// str -- (string) нераспарсенная строка элемента. пример: <item title="text" id="x345">
