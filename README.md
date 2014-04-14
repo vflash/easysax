@@ -50,6 +50,7 @@ easysax: 2954ms   //  namespace--off, attr()--off , entity_decode--off
 ```js
 var parser = new EasySax();
 
+// если требуется пространство имен
 parser.ns('rss', {
 	'http://www.w3.org/2005/Atom': 'atom',
 	'http://www.w3.org/1999/xhtml': 'xhtml',
