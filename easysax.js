@@ -851,6 +851,7 @@ function EasySAXParser() {
 				);
 
 				if (ok === false) {
+					state.end = true;
 					return;
 				};
 
@@ -863,6 +864,7 @@ function EasySAXParser() {
 				);
 
 				if (ok === false) {
+					state.end = true;
 					return;
 				};
 
