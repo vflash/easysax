@@ -84,7 +84,7 @@ function EasySAXParser() {
 		TYPE_COMMENT = 6,
 		TYPE_QUESTION = 7,
 		TYPE_ATTENTION = 8,
-		TYPE_END = 9; // end of xml and no more can be added
+		TYPE_END = 9, // end of xml and no more can be added
 		TYPE_STOP_PARSING = 10; // stop ask by user
 
 	function nullFunc() {};
@@ -194,7 +194,7 @@ function EasySAXParser() {
 
 	this.close = function(xml) {
 		state.closed = true;
-		parse(xml);
+		this.parse(xml);
 	}
 
 	// -----------------------------------------------------
@@ -623,7 +623,7 @@ function EasySAXParser() {
 			return result;
 		};
 
-		result.attr_res = true; // атрибутов нет
+		attr_res = true; // атрибутов нет
 
 		//if (xml.charCodeAt(i+1) === 47) { // </...
 		if (w === 47) { // </...
@@ -648,11 +648,7 @@ function EasySAXParser() {
 				w = xml.charCodeAt(q);
 
 				if (w===32 || (w > 8 && w<14) ) {  // \f\n\r\t\v space
-					result.type = TYPE_END_NODE;
-					result.name = elem;
-					result.i = i;
-					result.j = j;
-					return result;
+					continue;
 				};
 
 				if (closed) {
@@ -662,6 +658,11 @@ function EasySAXParser() {
 				return result;
 			};
 
+			result.type = TYPE_END_NODE;
+			result.name = elem;
+			result.i = i;
+			result.j = j;
+			return result;
 		} else {
 			if (xml.charCodeAt(j-1) ===  47) { // .../>
 				x = elem = xml.substring(i+1, j-1);
@@ -690,7 +691,7 @@ function EasySAXParser() {
 
 				if (w===32 || (w<14 && w > 8)) { // \f\n\r\t\v пробел
 					elem = x.substring(0, q)
-					result.attr_res = null; // возможно есть атирибуты
+					attr_res = null; // возможно есть атирибуты
 					break;
 				};
 
