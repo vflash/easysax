@@ -54,8 +54,8 @@
 	};
 
 
-	
-	
+
+
 	*/
 
 // << ------------------------------------------------------------------------ >> //
@@ -74,10 +74,43 @@ function EasySAXParser() {
 
 	if (!this) return null;
 
+	var
+	    TYPE_NEED_MORE_STRING = 0,
+		TYPE_ERROR = 1,
+		TYPE_START_NODE = 2,
+		TYPE_END_NODE = 3,
+		TYPE_TEXT_NODE = 4,
+		TYPE_CDATA_NODE = 5,
+		TYPE_COMMENT = 6,
+		TYPE_QUESTION = 7,
+		TYPE_ATTENTION = 8,
+		TYPE_END = 9; // end of xml and no more can be added
+		TYPE_STOP_PARSING = 10; // stop ask by user
+
 	function nullFunc() {};
 
 	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onError = nullFunc, onComment, onQuestion, onAttention;
 	var is_onComment, is_onQuestion, is_onAttention;
+
+	var state = {
+		u: null,
+		xml: "",
+		nodestack: [],
+		stacknsmatrix: [],
+		//, string_node
+		elem: null,
+		tagend: false,
+		tagstart: false,
+		j: 0, i: 0,
+		x: null, y: null, q: null,
+		xmlns: null,
+		stopIndex: 0,
+		stop: null, // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
+		_nsmatrix: null,
+		closed: false, // no more xml can be added
+		end: false // parse finished
+	};
+
 
 	var isNamespace = false, useNS , default_xmlns, xmlns
 	, nsmatrix = {xmlns: xmlns}
@@ -100,8 +133,8 @@ function EasySAXParser() {
 			case 'comment': onComment = cb; is_onComment = !!cb; break;
 			case 'question': onQuestion = cb; is_onQuestion = !!cb; break; // <? ....  ?>
 			case 'attention': onAttention = cb; is_onAttention = !!cb; break; // <!XXXXX zzzz="eeee">
-			
-		}; 
+
+		};
 	};
 
 	this.ns = function(root, ns) {
@@ -118,7 +151,7 @@ function EasySAXParser() {
 				x[i] = v;
 			};
 		};
-		
+
 		if (ok) {
 			isNamespace = true;
 			default_xmlns = root;
@@ -127,23 +160,42 @@ function EasySAXParser() {
 	};
 
 	this.parse = function(xml) {
-		if (typeof xml !== 'string') {
+		if (state.end) {
+			onError("Closed");
+			return;
+		}
+		if (xml && typeof xml !== 'string') {
 			return;
 		};
 
-		if (isNamespace) {
-			nsmatrix = {xmlns: default_xmlns};
+		if (xml) {
+			if (state.xml) {
+				state.xml = state.xml.substring(state.i) + String(xml);
+				state.j = state.j - state.i;
+				state.i = 0;
+			} else {
+				state.xml = String(xml);
+			}
+		}
 
-			parse(xml);
-			
-			nsmatrix = false;
+		if (isNamespace && !state.nsmatrix) {
+			state.nsmatrix = {xmlns: default_xmlns};
+
+			parse(state);
+
+			state.nsmatrix = false;
 
 		} else {
-			parse(xml);
+			parse(state);
 		};
 
 		attr_res = true;
 	};
+
+	this.close = function(xml) {
+		state.closed = true;
+		parse(xml);
+	}
 
 	// -----------------------------------------------------
 
@@ -199,7 +251,7 @@ function EasySAXParser() {
 	};
 
 	var attr_string = ''; // строка атрибутов
-	var attr_posstart = 0; // 
+	var attr_posstart = 0; //
 	var attr_res; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
 
 	/*
@@ -220,7 +272,7 @@ function EasySAXParser() {
 		/*
 		if (xxtest !== u && attr_string.indexOf(xxtest) === -1) {
 			/ *
-				// для ускорения 
+				// для ускорения
 				if (getAttrs('html').type == 'html') {
 					...
 				};
@@ -240,10 +292,10 @@ function EasySAXParser() {
 		, j, w, nn, n
 		, hasNewMatrix
 		, alias, newalias
-		; 
+		;
 
 
-		aa: 
+		aa:
 		for(; i < l; i++) {
 			w = s.charCodeAt(i);
 
@@ -256,7 +308,7 @@ function EasySAXParser() {
 				return attr_res = false; // error. invalid char
 			};
 
-			for(j = i + 1; j < l; j++) { // проверяем все символы имени атрибута 
+			for(j = i + 1; j < l; j++) { // проверяем все символы имени атрибута
 				w = s.charCodeAt(j);
 
 				if ( w>96 && w < 123 || w>64 && w< 91 || w > 47 && w < 59 || w === 45 || w === 95) {
@@ -315,7 +367,7 @@ function EasySAXParser() {
 			value = s.substring(i, j);
 			i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
 
-			if (isNamespace) { // 
+			if (isNamespace) { //
 				if (hasSurmiseNS) {
 					// есть подозрение что в атрибутах присутствует xmlns
 
@@ -323,24 +375,24 @@ function EasySAXParser() {
 						alias = useNS[unEntities(value)];
 
 						if (alias) {
-							if (nsmatrix[newalias] !== alias) {
+							if (state.nsmatrix[newalias] !== alias) {
 								if (!hasNewMatrix) {
 									hasNewMatrix = true;
-									nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
-									nsmatrix = nn;
+									nn = {}; for (n in state.nsmatrix) nn[n] = state.nsmatrix[n];
+									state.nsmatrix = nn;
 								};
 
-								nsmatrix[newalias] = alias;
+								state.nsmatrix[newalias] = alias;
 							};
 						} else {
-							if (nsmatrix[newalias]) {
+							if (state.nsmatrix[newalias]) {
 								if (!hasNewMatrix) {
 									hasNewMatrix = true;
-									nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
-									nsmatrix = nn;
+									nn = {}; for (n in state.nsmatrix) nn[n] = state.nsmatrix[n];
+									state.nsmatrix = nn;
 								};
 
-								nsmatrix[newalias] = false;
+								state.nsmatrix[newalias] = false;
 							};
 						};
 
@@ -355,7 +407,7 @@ function EasySAXParser() {
 				w = name.length;
 				while(--w) {
 					if (name.charCodeAt(w) === 58) { // ':'
-						if (w = nsmatrix[name.substring(0, w)] ) {
+						if (w = state.nsmatrix[name.substring(0, w)] ) {
 							res[w + name.substr(w)] = value;
 						};
 						continue aa;
@@ -372,10 +424,10 @@ function EasySAXParser() {
 		if (!ok) {
 			return attr_res = true;  // атрибутов нет, ошибок тоже нет
 		};
-		
+
 
 		if (hasSurmiseNS)  {
-			bb: 
+			bb:
 
 			for (i = 0, l = attr_list.length; i < l; i++) {
 				name = attr_list[i++];
@@ -383,7 +435,7 @@ function EasySAXParser() {
 				w = name.length;
 				while(--w) { // name.indexOf(':')
 					if (name.charCodeAt(w) === 58) { // ':'
-						if (w = nsmatrix[name.substring(0, w)]) {
+						if (w = state.nsmatrix[name.substring(0, w)]) {
 							res[w + name.substr(w)] = attr_list[i];
 						};
 						continue bb;
@@ -398,226 +450,339 @@ function EasySAXParser() {
 		return attr_res = res;
 	};
 
+	function _getNextTag(state) {
+		var u
+		, xml = state.xml
+		, i = state.i, j = state.j
+		, nodestack = state.nodestack
+		, stacknsmatrix = state.stacknsmatrix
+		//, string_node
+		, elem
+		, x, y, q, w
+		, xmlns
+		, stopIndex = state.stopIndex
+		, stop = stopIndex > 0
+		, _nsmatrix
+		, ok
+		, closed = state.closed
+		;
+
+		var result = {
+			type: TYPE_NEED_MORE_STRING,
+			tagend: false,
+			tagstart: false
+		};
+
+		if (xml.charCodeAt(j) === 60) { // "<"
+			i = j;
+		} else {
+			i = xml.indexOf('<', j);
+		};
+
+		if (i === -1) { // конец разбора
+
+			if (nodestack.length) {
+				if (closed) {
+					onError('end file');
+					result.type = TYPE_ERROR;
+				}
+			} else if (closed) {
+				result.type = TYPE_END;
+			}
+
+			return result;
+		};
+
+		if (j !== i && !stop) {
+			result.j = i;
+			result.i = i;
+			ok = onTextNode(xml.substring(j, i), unEntities);
+			if (ok === false)  {
+				result.type = TYPE_STOP_PARSING;
+				return result;
+			}
+		};
+
+		w = xml.charCodeAt(i+1);
+
+		if (w === 33) { // "!"
+			w = xml.charCodeAt(i+2);
+			if (w === 91 && xml.substr(i+3, 6) === 'CDATA[') { // 91 == "["
+				j = xml.indexOf(']]>', i);
+				if (j === -1) {
+					if (closed) {
+						onError('cdata');
+						result.type = TYPE_ERROR;
+					}
+					return result;
+				}
+
+				//x = xml.substring(i+9, j);
+				if (!stop) {
+					ok = onCDATA(xml.substring(i+9, j), false);
+					if (ok === false) {
+						result.type = TYPE_STOP_PARSING;
+						return result;
+					}
+				};
+
+
+				j += 3;
+
+				result.type = TYPE_CDATA_NODE;
+				result.i = i;
+				result.j = j;
+				return result;
+			};
+
+
+			if (w === 45 && xml.charCodeAt(i+3) === 45) { // 45 == "-"
+				j = xml.indexOf('-->', i);
+				if (j === -1) {
+					if (closed) {
+						onError('expected -->');
+						result.type = TYPE_ERROR;
+					}
+					return result;
+				};
+
+
+				if (is_onComment && !stop) {
+					ok = onComment(xml.substring(i+4, j), unEntities);
+					if (ok === false) {
+						result.type = TYPE_STOP_PARSING;
+						return result;
+					};
+				};
+
+				j += 3;
+
+				result.type = TYPE_COMMENT;
+				result.i = i;
+				result.j = j;
+				return result;
+			};
+
+			j = xml.indexOf('>', i+1);
+			if (j === -1) {
+				if (closed) {
+					onError('expected ">"');
+					result.type = TYPE_ERROR;
+				}
+				return result;
+			};
+
+			if (is_onAttention && !stop) {
+				ok = onAttention(xml.substring(i, j+1), unEntities);
+				if (ok === false) {
+					result.type = TYPE_STOP_PARSING;
+					return result;
+				};
+			};
+
+			j += 1;
+			result.type = TYPE_ATTENTION;
+			result.i = i;
+			result.j = j;
+			return result;
+		} else {
+			if (w === 63) { // "?"
+				j = xml.indexOf('?>', i);
+				if (j === -1) { // error
+					if (closed) {
+						onError('...?>');
+						result.type = TYPE_ERROR;
+					}
+					return result;
+				};
+
+				if (is_onQuestion) {
+					ok = onQuestion(xml.substring(i, j+2));
+					if (ok === false) {
+						result.type = TYPE_STOP_PARSING;
+						return result;
+					};
+				};
+
+				j += 2;
+
+				result.type = TYPE_QUESTION;
+				result.i = i;
+				result.j = j;
+				return result;
+			};
+		};
+
+		j = xml.indexOf('>', i+1);
+
+		if (j == -1) { // error
+			if (closed) {
+				onError('...>');
+				result.type = TYPE_ERROR;
+			}
+			return result;
+		};
+
+		result.attr_res = true; // атрибутов нет
+
+		//if (xml.charCodeAt(i+1) === 47) { // </...
+		if (w === 47) { // </...
+			result.tagstart = false;
+			result.tagend = true;
+
+			// проверяем что должен быть закрыт тотже тег что и открывался
+			x = elem = nodestack.pop();
+			q = i + 2 + x.length;
+
+			//console.log()
+			if (xml.substring(i+2, q) !== x) {
+				if (closed) {
+					onError('close tagname');
+					result.type = TYPE_ERROR;
+				}
+				return result;
+			};
+
+			// проверим что в закрываюшем теге нет лишнего
+			for(; q < j; q++) {
+				w = xml.charCodeAt(q);
+
+				if (w===32 || (w > 8 && w<14) ) {  // \f\n\r\t\v space
+					result.type = TYPE_END_NODE;
+					result.name = elem;
+					result.i = i;
+					result.j = j;
+					return result;
+				};
+
+				if (closed) {
+					onError('close tag');
+					result.type = TYPE_ERROR;
+				}
+				return result;
+			};
+
+		} else {
+			if (xml.charCodeAt(j-1) ===  47) { // .../>
+				x = elem = xml.substring(i+1, j-1);
+
+				result.tagstart = true;
+				result.tagend = true;
+			} else {
+				x = elem = xml.substring(i+1, j);
+
+				result.tagstart = true;
+				result.tagend = false;
+			};
+
+			if ( !(w > 96  && w < 123 || w > 64 && w <91) ) {
+				onError('first char nodeName');
+				result.type = TYPE_ERROR;
+				return result;
+			};
+
+			for(q = 1, y = x.length; q < y; q++) {
+				w = x.charCodeAt(q);
+
+				if ( w>96 && w < 123 || w>64 && w< 91 || w > 47 && w < 59 || w === 45 || w === 95) {
+					continue;
+				};
+
+				if (w===32 || (w<14 && w > 8)) { // \f\n\r\t\v пробел
+					elem = x.substring(0, q)
+					result.attr_res = null; // возможно есть атирибуты
+					break;
+				};
+
+				onError('invalid nodeName');
+				result.type = TYPE_ERROR;
+				return result;
+			};
+
+			if (!result.tagend) {
+				nodestack.push(elem);
+			};
+
+			result.type = TYPE_START_NODE;
+			result.name = elem;
+			result.tagAndAttrs = x;
+			result.attrsPos = q;
+			result.i = i;
+			result.j = j;
+			return result;
+		};
+
+	}
 
 	// xml - string
-	function parse(xml) {
+	function parse(state) {
 		var u
-		, xml = String(xml)
-		, nodestack = []
-		, stacknsmatrix = []
+		, xml = state.xml
+		, nodestack = state.nodestack
+		, stacknsmatrix = state.stacknsmatrix
 		//, string_node
 		, elem
 		, tagend = false
 		, tagstart = false
-		, j = 0, i = 0
 		, x, y, q, w
 		, xmlns
-		, stopIndex = 0
-		, stop // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
+		, stopIndex = state.stopIndex
+		, stop
 		, _nsmatrix
 		, ok
+		, closed = state.closed
+		, node
 		;
 
 		function getStringNode() {
-			return xml.substring(i, j+1)
+			return xml.substring(state.i, state.j + 1)
 		};
 
-		while(j !== -1) {
-			stop = stopIndex > 0;
+		while(state.j !== -1) {
+			stop = state.stopIndex > 0;
 
-			if (xml.charCodeAt(j) === 60) { // "<"
-				i = j;
-			} else {
-				i = xml.indexOf('<', j);
-			};
-
-			if (i === -1) { // конец разбора
-
-				if (nodestack.length) {
-					onError('end file');
+			node = _getNextTag(state);
+			switch (node.type) {
+				case TYPE_NEED_MORE_STRING:
+				    return;
+				case TYPE_ERROR:
+				case TYPE_STOP_PARSING:
+				case TYPE_END:
+				    state.end = true;
 					return;
-				};
-
-				return;
-			};
-
-			if (j !== i && !stop) {
-				ok = onTextNode(xml.substring(j, i), unEntities);
-				if (ok === false) return;
-			};
-
-			w = xml.charCodeAt(i+1);
-
-			if (w === 33) { // "!"
-				w = xml.charCodeAt(i+2);
-				if (w === 91 && xml.substr(i+3, 6) === 'CDATA[') { // 91 == "["
-					j = xml.indexOf(']]>', i);
-					if (j === -1) {
-						onError('cdata');
-						return;
-					};
-					
-					//x = xml.substring(i+9, j);
-					if (!stop) {
-						ok = onCDATA(xml.substring(i+9, j), false);
-						if (ok === false) return;
-					};
-					
-
-					j += 3;
-					continue;
-				};
-				
-
-				if (w === 45 && xml.charCodeAt(i+3) === 45) { // 45 == "-"
-					j = xml.indexOf('-->', i);
-					if (j === -1) {
-						onError('expected -->');
-						return;
-					};
-
-
-					if (is_onComment && !stop) {
-						ok = onComment(xml.substring(i+4, j), unEntities);
-						if (ok === false) return;
-					};
-
-					j += 3;
-					continue;
-				};
-
-				j = xml.indexOf('>', i+1);
-				if (j === -1) {
-					onError('expected ">"');
-					return;
-				};
-
-				if (is_onAttention && !stop) {
-					ok = onAttention(xml.substring(i, j+1), unEntities);
-					if (ok === false) return;
-				};
-
-				j += 1;
-				continue;
-
-			} else {
-				if (w === 63) { // "?"
-					j = xml.indexOf('?>', i);
-					if (j === -1) { // error
-						onError('...?>');
-						return;
-					};
-					
-					if (is_onQuestion) {
-						ok = onQuestion(xml.substring(i, j+2));
-						if (ok === false) return;
-					};
-
-					j += 2;
-					continue;
-				};
-			};
-
-			j = xml.indexOf('>', i+1);
-
-			if (j == -1) { // error 
-				onError('...>');
-				return;
-			};
-
-			attr_res = true; // атрибутов нет
-
-			//if (xml.charCodeAt(i+1) === 47) { // </...
-			if (w === 47) { // </...
-				tagstart = false;
-				tagend = true;
-
-				// проверяем что должен быть закрыт тотже тег что и открывался
-				x = elem = nodestack.pop();
-				q = i + 2 + x.length;
-
-				//console.log()
-				if (xml.substring(i+2, q) !== x) {
-					onError('close tagname');
-					return;
-				};
-
-				// проверим что в закрываюшем теге нет лишнего
-				for(; q < j; q++) {
-					w = xml.charCodeAt(q);
-
-					if (w===32 || (w > 8 && w<14) ) {  // \f\n\r\t\v пробел
-						continue;
-					};
-
-					onError('close tag');
-					return;
-				};
-
-			} else {
-				if (xml.charCodeAt(j-1) ===  47) { // .../>
-					x = elem = xml.substring(i+1, j-1);
-
-					tagstart = true;
-					tagend = true;
-				} else {
-					x = elem = xml.substring(i+1, j);
-
-					tagstart = true;
-					tagend = false;
-				};
-
-				if ( !(w > 96  && w < 123 || w > 64 && w <91) ) {
-					onError('first char nodeName');
-					return;
-				};
-
-				for(q = 1, y = x.length; q < y; q++) {
-					w = x.charCodeAt(q);
-
-					if ( w>96 && w < 123 || w>64 && w< 91 || w > 47 && w < 59 || w === 45 || w === 95) {
-						continue;
-					};
-
-					if (w===32 || (w<14 && w > 8)) { // \f\n\r\t\v пробел
-						elem = x.substring(0, q)
-						attr_res = null; // возможно есть атирибуты
-						break;
-					};
-
-					onError('invalid nodeName');
-					return;
-				};
-
-				if (!tagend) {
-					nodestack.push(elem);
-				};
-			};
-
+				default:
+					state.i = node.i;
+					state.j = node.j;
+					elem = node.name;
+					tagend = node.tagend;
+					tagstart = node.tagstart;
+					x = node.tagAndAttrs;
+					q = node.attrsPos;
+			}
 
 			if (isNamespace) {
 				if (stop) {
 					if (tagend) {
 						if (!tagstart) {
-							if (--stopIndex === 0) {
-								nsmatrix = stacknsmatrix.pop();
+							if (--state.stopIndex === 0) {
+								state.nsmatrix = stacknsmatrix.pop();
 							};
 						};
 
 					} else {
-						stopIndex += 1;
+						state.stopIndex += 1;
 					};
 
 
-					j += 1;
+					state.j += 1;
 					continue;
 				};
 
-				_nsmatrix = nsmatrix;
+				_nsmatrix = state.nsmatrix;
 
 				if (!tagend) {
-					stacknsmatrix.push(nsmatrix);
-					
+					stacknsmatrix.push(state.nsmatrix);
+
 					if (attr_res !== true) {
 						if (hasSurmiseNS = x.indexOf('xmlns', q) !== -1) {
 							attr_string = x;
@@ -631,30 +796,30 @@ function EasySAXParser() {
 				};
 
 
-				w = elem.indexOf(':'); 
+				w = elem.indexOf(':');
 				if (w !== -1) {
-					xmlns = nsmatrix[elem.substring(0, w)];
+					xmlns = state.nsmatrix[elem.substring(0, w)];
 					elem = elem.substr(w+1);
-					
-					
+
+
 				} else {
-					xmlns = nsmatrix.xmlns;
+					xmlns = state.nsmatrix.xmlns;
 				};
 
-				
+
 				if (!xmlns) {
 					if (tagend) {
 						if (tagstart) {
-							nsmatrix = _nsmatrix;
+							state.nsmatrix = _nsmatrix;
 						} else {
-							nsmatrix = stacknsmatrix.pop();
+							state.nsmatrix = stacknsmatrix.pop();
 						};
 					} else {
-						stopIndex = 1; // первый элемент для которого не определено пространство имен 
+						state.stopIndex = 1; // первый элемент для которого не определено пространство имен
 						attr_res = true;
 					};
 
-					j += 1;
+					state.j += 1;
 					continue;
 				};
 
@@ -662,7 +827,7 @@ function EasySAXParser() {
 			};
 
 			//string_node = xml.substring(i, j+1); // текст ноды как есть
-			
+
 
 			if (tagstart) { // is_onStartNode
 				attr_string = x;
@@ -690,19 +855,14 @@ function EasySAXParser() {
 
 				if (isNamespace) {
 					if (tagstart) {
-						nsmatrix = _nsmatrix;
+						state.nsmatrix = _nsmatrix;
 					} else {
-						nsmatrix = stacknsmatrix.pop();
+						state.nsmatrix = stacknsmatrix.pop();
 					};
 				};
 			};
 
-			j += 1;
-		}; 
+			state.j += 1;
+		};
 	};
 };
-
-
-
-
-
