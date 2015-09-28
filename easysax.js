@@ -196,7 +196,7 @@ function EasySAXParser() {
 
 	this.close = function(xml) {
 		state.closed = true;
-		this.parse(xml);
+		return this.parse(xml);
 	}
 
 	// -----------------------------------------------------
