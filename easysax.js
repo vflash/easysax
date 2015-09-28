@@ -92,7 +92,7 @@ function EasySAXParser() {
 	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onError = nullFunc, onComment, onQuestion, onAttention;
 	var is_onComment, is_onQuestion, is_onAttention;
 
-	var state = {
+	var state = this.state = {
 		u: null,
 		xml: "",
 		nodestack: [],
@@ -161,11 +161,12 @@ function EasySAXParser() {
 
 	this.parse = function(xml) {
 		if (state.end) {
-			onError("Closed");
-			return;
+			state.error = "Add xml on closed parser";
+			onError(state.error);
+			return state;
 		}
 		if (xml && typeof xml !== 'string') {
-			return;
+			return state;
 		};
 
 		if (xml) {
@@ -190,6 +191,7 @@ function EasySAXParser() {
 		};
 
 		attr_res = true;
+		return state;
 	};
 
 	this.close = function(xml) {
@@ -483,7 +485,8 @@ function EasySAXParser() {
 
 			if (nodestack.length) {
 				if (closed) {
-					onError('end file');
+					state.error = 'end file';
+					onError(state.error);
 					result.type = TYPE_ERROR;
 				}
 			} else if (closed) {
@@ -511,7 +514,8 @@ function EasySAXParser() {
 				j = xml.indexOf(']]>', i);
 				if (j === -1) {
 					if (closed) {
-						onError('cdata');
+						state.error = 'expected "]]>" pos:' + i;
+						onError(state.error);
 						result.type = TYPE_ERROR;
 					}
 					return result;
@@ -540,7 +544,8 @@ function EasySAXParser() {
 				j = xml.indexOf('-->', i);
 				if (j === -1) {
 					if (closed) {
-						onError('expected -->');
+						state.error = 'expected --> pos:' + i;
+						onError(state.error);
 						result.type = TYPE_ERROR;
 					}
 					return result;
@@ -566,7 +571,8 @@ function EasySAXParser() {
 			j = xml.indexOf('>', i+1);
 			if (j === -1) {
 				if (closed) {
-					onError('expected ">"');
+					state.error = 'expected ">" pos' + i;
+					onError(state.error);
 					result.type = TYPE_ERROR;
 				}
 				return result;
@@ -590,7 +596,8 @@ function EasySAXParser() {
 				j = xml.indexOf('?>', i);
 				if (j === -1) { // error
 					if (closed) {
-						onError('...?>');
+						state.error = 'expected "?>" pos:' + i;
+						onError(state.error);
 						result.type = TYPE_ERROR;
 					}
 					return result;
@@ -617,7 +624,8 @@ function EasySAXParser() {
 
 		if (j == -1) { // error
 			if (closed) {
-				onError('...>');
+				state.error = 'expected ">" pos:' + i;
+				onError(state.error);
 				result.type = TYPE_ERROR;
 			}
 			return result;
@@ -637,7 +645,8 @@ function EasySAXParser() {
 			//console.log()
 			if (xml.substring(i+2, q) !== x) {
 				if (closed) {
-					onError('close tagname');
+					state.error = "expected close tagname '"+elem+"' found '"+xml.substring(i+2, q)+"' pos:" + i;
+					onError(state.error);
 					result.type = TYPE_ERROR;
 				}
 				return result;
@@ -652,7 +661,8 @@ function EasySAXParser() {
 				};
 
 				if (closed) {
-					onError('close tag');
+					state.error = "expected close tagname '"+elem+"' found '"+xml.substring(i+2, q)+"' pos:" + i;
+					onError(state.error);
 					result.type = TYPE_ERROR;
 				}
 				return result;
@@ -677,7 +687,8 @@ function EasySAXParser() {
 			};
 
 			if ( !(w > 96  && w < 123 || w > 64 && w <91) ) {
-				onError('first char nodeName');
+				state.error = "invalide first char nodeName pos: "+ i;
+				onError(state.error);
 				result.type = TYPE_ERROR;
 				return result;
 			};
@@ -695,7 +706,8 @@ function EasySAXParser() {
 					break;
 				};
 
-				onError('invalid nodeName');
+				state.error = "invalide nodeName pos:" + (i + q);
+				onError(state.error);
 				result.type = TYPE_ERROR;
 				return result;
 			};
