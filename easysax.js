@@ -93,30 +93,20 @@ function EasySAXParser() {
 	var is_onComment, is_onQuestion, is_onAttention;
 
 	var state = this.state = {
-		u: null,
 		xml: "",
 		nodestack: [],
 		stacknsmatrix: [],
-		//, string_node
-		elem: null,
-		tagend: false,
-		tagstart: false,
+		nsmatrix: {xmlns: null},
 		j: 0, i: 0,
-		x: null, y: null, q: null,
-		xmlns: null,
 		stopIndex: 0,
-		stop: null, // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
-		_nsmatrix: null,
 		closed: false, // no more xml can be added
-		end: false // parse finished
+		end: false, // parse finished
+		error: null
 	};
 
-
 	var isNamespace = false, useNS , default_xmlns, xmlns
-	, nsmatrix = {xmlns: xmlns}
 	, hasSurmiseNS = false
 	;
-
 
 	this.on = function(name, cb) {
 		if (typeof cb !== 'function') {
@@ -171,7 +161,7 @@ function EasySAXParser() {
 
 		if (xml) {
 			if (state.xml) {
-				state.xml = state.xml.substring(state.i) + String(xml);
+				state.xml = state.xml.substring(state.i) + xml;
 				state.j = state.j - state.i;
 				state.i = 0;
 			} else {
@@ -453,18 +443,13 @@ function EasySAXParser() {
 	};
 
 	function _getNextTag(state) {
-		var u
-		, xml = state.xml
+		var xml = state.xml
 		, i = state.i, j = state.j
 		, nodestack = state.nodestack
-		, stacknsmatrix = state.stacknsmatrix
-		//, string_node
 		, elem
 		, x, y, q, w
-		, xmlns
 		, stopIndex = state.stopIndex
 		, stop = stopIndex > 0
-		, _nsmatrix
 		, ok
 		, closed = state.closed
 		;
@@ -729,21 +714,16 @@ function EasySAXParser() {
 
 	// xml - string
 	function parse(state) {
-		var u
-		, xml = state.xml
-		, nodestack = state.nodestack
+		var xml = state.xml
 		, stacknsmatrix = state.stacknsmatrix
-		//, string_node
 		, elem
 		, tagend = false
 		, tagstart = false
-		, x, y, q, w
+		, x, q, w
 		, xmlns
-		, stopIndex = state.stopIndex
 		, stop
 		, _nsmatrix
 		, ok
-		, closed = state.closed
 		, node
 		;
 
