@@ -3,10 +3,10 @@
 		var parser = new EasySAXParser();
 
 		parser.ns('rss', { // or false
-			rss: 'http://purl.org/rss/1.0/',
-			atom: 'http://www.w3.org/2005/Atom',
-			xhtml: 'http://www.w3.org/1999/xhtml',
-			media: 'http://search.yahoo.com/mrss/'
+			'http://purl.org/rss/1.0/': 'rss',
+			'http://www.w3.org/2005/Atom': 'atom',
+			'http://www.w3.org/1999/xhtml', 'xhtml',
+			'http://search.yahoo.com/mrss/', 'media'
 		});
 
 
@@ -657,6 +657,8 @@ function EasySAXParser() {
 			result.name = elem;
 			result.i = i;
 			result.j = j;
+			result.tagAndAttrs = x;
+			result.attrsPos = q;
 			return result;
 		} else {
 			if (xml.charCodeAt(j-1) ===  47) { // .../>
@@ -743,6 +745,13 @@ function EasySAXParser() {
 				case TYPE_END:
 				    state.end = true;
 					return;
+				case TYPE_CDATA_NODE:
+				case TYPE_COMMENT:
+				case TYPE_QUESTION:
+				case TYPE_ATTENTION:
+				    state.i = node.i;
+					state.j = node.j;
+					continue;
 				default:
 					state.i = node.i;
 					state.j = node.j;
