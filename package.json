@@ -2,7 +2,7 @@
 	"name" : "easysax",
 	"description": "pure javascript xml parser",
 	"keywords": ["xml", "sax", "parser", "pure"],
-	"version": "0.1.13",
+	"version": "0.1.13.1",
 	"main" : "./easysax.js",
 
 	"bugs": {
@@ -14,6 +14,11 @@
 		"email" : "flash.vkv@gmail.com",
 		"url" : "http://vflash.ru"
 	},
+	"contributors":[{
+		"name": "Benjamin POUSSIN",
+		"email": "poussin@codelutin.com",
+		"url": "http://www.codelutin.com"
+	}],
 	
 	"files":["easysax.js", "LICENSE", "README.md"],
 	
