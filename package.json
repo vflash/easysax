@@ -2,7 +2,7 @@
 	"name" : "easysax",
 	"description": "pure javascript xml parser",
 	"keywords": ["xml", "sax", "parser", "pure"],
-	"version": "0.1.13.1",
+	"version": "0.1.14",
 	"main" : "./easysax.js",
 
 	"bugs": {
