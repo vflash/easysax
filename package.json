@@ -1,26 +1,35 @@
 {
-	"name" : "easysax",
+	"name": "easysax",
 	"description": "pure javascript xml parser",
-	"keywords": ["xml", "sax", "parser", "pure"],
-	"version": "0.1.13",
-	"main" : "./easysax.js",
-
+	"scripts": {
+		"test": "mocha"
+	},
+	"keywords": [
+		"xml",
+		"sax",
+		"parser",
+		"pure"
+	],
+	"version": "0.2.0",
+	"main": "./easysax.js",
 	"bugs": {
 		"url": "https://github.com/vflash/easysax/issues"
 	},
-
-	"author":{ 
-		"name" : "Vopilovskiy Konstantin",
-		"email" : "flash.vkv@gmail.com",
-		"url" : "http://vflash.ru"
+	"author": {
+		"name": "Vopilovskiy Konstantin",
+		"email": "flash.vkv@gmail.com",
+		"url": "http://vflash.ru"
 	},
-	
-	"files":["easysax.js", "LICENSE", "README.md"],
-	
+	"files": [
+		"easysax.js",
+		"LICENSE",
+		"README.md"
+	],
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/vflash/easysax"
+	},
+	"devDependencies": {
+		"mocha": "^3.5.0"
 	}
-
 }
-
