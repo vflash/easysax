@@ -123,273 +123,273 @@ function unEntities(s) {
 
 
 function EasySAXParser() {
-	'use strict';
+    'use strict';
 
-	if (!this) {
+    if (!this) {
         return null;
     };
 
-	function nullFunc() {};
+    function nullFunc() {};
 
-	var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onError = nullFunc, onComment, onQuestion, onAttention;
-	var is_onComment, is_onQuestion, is_onAttention;
+    var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onError = nullFunc, onComment, onQuestion, onAttention;
+    var is_onComment, is_onQuestion, is_onAttention;
 
     var default_xmlns;
-	var hasSurmiseNS = false;
-	var isNamespace = false;
+    var hasSurmiseNS = false;
+    var isNamespace = false;
     var returnError = null;
     var parseStop = false; // прервать парсер
-	var nsmatrix = {xmlns: xmlns};
+    var nsmatrix = {xmlns: xmlns};
     var useNS;
     var xmlns;
 
 
-	this.on = function(name, cb) {
-		if (typeof cb !== 'function') {
-			if (cb !== null) return;
-		};
+    this.on = function(name, cb) {
+        if (typeof cb !== 'function') {
+            if (cb !== null) return;
+        };
 
-		switch(name) {
-			case 'startNode': onStartNode = cb || nullFunc; break;
-			case 'textNode': onTextNode = cb || nullFunc; break;
-			case 'endNode': onEndNode = cb || nullFunc; break;
-			case 'error': onError = cb || nullFunc; break;
-			case 'cdata': onCDATA = cb || nullFunc; break;
+        switch(name) {
+            case 'startNode': onStartNode = cb || nullFunc; break;
+            case 'textNode': onTextNode = cb || nullFunc; break;
+            case 'endNode': onEndNode = cb || nullFunc; break;
+            case 'error': onError = cb || nullFunc; break;
+            case 'cdata': onCDATA = cb || nullFunc; break;
 
-			case 'attention': onAttention = cb; is_onAttention = !!cb; break; // <!XXXXX zzzz="eeee">
-			case 'question': onQuestion = cb; is_onQuestion = !!cb; break; // <? ....  ?>
-			case 'comment': onComment = cb; is_onComment = !!cb; break;
-		};
-	};
+            case 'attention': onAttention = cb; is_onAttention = !!cb; break; // <!XXXXX zzzz="eeee">
+            case 'question': onQuestion = cb; is_onQuestion = !!cb; break; // <? ....  ?>
+            case 'comment': onComment = cb; is_onComment = !!cb; break;
+        };
+    };
 
-	this.ns = function(root, ns) {
-		if (!root || typeof root !== 'string' || !ns) {
-			return this;
-		};
+    this.ns = function(root, ns) {
+        if (!root || typeof root !== 'string' || !ns) {
+            return this;
+        };
 
-		var x = {}, ok, v, i;
+        var x = {}, ok, v, i;
 
-		for(i in ns) {
-			v = ns[i];
-			if (typeof v === 'string') {
-				if (root === v) ok = true;
-				x[i] = v;
-			};
-		};
+        for(i in ns) {
+            v = ns[i];
+            if (typeof v === 'string') {
+                if (root === v) ok = true;
+                x[i] = v;
+            };
+        };
 
-		if (ok) {
-			default_xmlns = root;
-			isNamespace = true;
-			useNS = x;
-		};
+        if (ok) {
+            default_xmlns = root;
+            isNamespace = true;
+            useNS = x;
+        };
 
         return this;
-	};
+    };
 
-	this.parse = function(xml) {
-		if (typeof xml !== 'string') {
-			return;
-		};
+    this.parse = function(xml) {
+        if (typeof xml !== 'string') {
+            return;
+        };
 
         returnError = null;
 
-		if (isNamespace) {
-			nsmatrix = {xmlns: default_xmlns};
+        if (isNamespace) {
+            nsmatrix = {xmlns: default_xmlns};
 
-			parse(xml);
+            parse(xml);
 
-			nsmatrix = false;
+            nsmatrix = false;
 
-		} else {
-			parse(xml);
-		};
+        } else {
+            parse(xml);
+        };
 
         parseStop = false;
-		attr_res = true;
+        attr_res = true;
 
         return returnError;
-	};
+    };
 
     this.stop = function() {
         parseStop = true;
     };
 
-	// -----------------------------------------------------
+    // -----------------------------------------------------
 
 
-	var attr_string = ''; // строка атрибутов
-	var attr_posstart = 0; //
-	var attr_res; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
+    var attr_string = ''; // строка атрибутов
+    var attr_posstart = 0; //
+    var attr_res; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
 
-	/*
-		парсит атрибуты по требованию. Важно! - функция не генерирует исключения.
+    /*
+        парсит атрибуты по требованию. Важно! - функция не генерирует исключения.
 
-		если была ошибка разбора возврашается false
-		если атрибутов нет и разбор удачен то возврашается true
-		если есть атрибуты то возврашается обьект(хеш)
-	*/
+        если была ошибка разбора возврашается false
+        если атрибутов нет и разбор удачен то возврашается true
+        если есть атрибуты то возврашается обьект(хеш)
+    */
 
-	function getAttrs() {
-		if (attr_res !== null) {
-			return attr_res;
-		};
+    function getAttrs() {
+        if (attr_res !== null) {
+            return attr_res;
+        };
 
-		var u
+        var u
         , xmlnsAlias
         , nsAttrName
         , attrList = isNamespace && hasSurmiseNS ? [] : null
-		, i = attr_posstart
-		, s = attr_string
-		, l = s.length
-		, nn, j, n
-		, hasNewMatrix
+        , i = attr_posstart
+        , s = attr_string
+        , l = s.length
+        , nn, j, n
+        , hasNewMatrix
         , newalias
         , value
-		, alias
-		, name
-		, res
+        , alias
+        , name
+        , res
         , ok
         , w = 0
-		;
+        ;
 
-		aa:
-		for(; i < l; i++) {
-			w = s.charCodeAt(i);
+        aa:
+        for(; i < l; i++) {
+            w = s.charCodeAt(i);
 
-			if (w === 32 || (w < 14 && w > 8) ) { // \f\n\r\t\v
-				continue
-			};
+            if (w === 32 || (w < 14 && w > 8) ) { // \f\n\r\t\v
+                continue
+            };
 
-			if (w < 65 || w > 122 || (w > 90 && w < 97) ) { // ожидаем символ
-				return attr_res = false; // error. invalid first char
-			};
+            if (w < 65 || w > 122 || (w > 90 && w < 97) ) { // ожидаем символ
+                return attr_res = false; // error. invalid first char
+            };
 
-			for(j = i + 1; j < l; j++) { // проверяем все символы имени атрибута
-				w = s.charCodeAt(j);
+            for(j = i + 1; j < l; j++) { // проверяем все символы имени атрибута
+                w = s.charCodeAt(j);
 
-				if ( w > 96 && w < 123 || w > 64 && w < 91 || w > 47 && w < 59 || w === 45 || w === 95) {
-					continue;
-				};
+                if ( w > 96 && w < 123 || w > 64 && w < 91 || w > 47 && w < 59 || w === 45 || w === 95) {
+                    continue;
+                };
 
-				if (w !== 61) { // "=" == 61
-					return attr_res = false; // error. invalid char "="
-				};
+                if (w !== 61) { // "=" == 61
+                    return attr_res = false; // error. invalid char "="
+                };
 
-				break;
-			};
+                break;
+            };
 
-			name = s.substring(i, j);
-			ok = true;
+            name = s.substring(i, j);
+            ok = true;
 
-			if (name === 'xmlns:xmlns') {
-				return attr_res = false; // error. invalid name
-			};
+            if (name === 'xmlns:xmlns') {
+                return attr_res = false; // error. invalid name
+            };
 
-			w = s.charCodeAt(j + 1);
+            w = s.charCodeAt(j + 1);
 
-			if (w === 34) {  // '"'
-				j = s.indexOf('"', i = j + 2 );
+            if (w === 34) {  // '"'
+                j = s.indexOf('"', i = j + 2 );
 
-			} else {
+            } else {
                 if (w !== 39) { // "'"
                     return attr_res = false; // error. invalid char
                 };
 
                 j = s.indexOf('\'', i = j + 2 );
-			};
+            };
 
-			if (j === -1) {
-				return attr_res = false; // error. invalid char
-			};
+            if (j === -1) {
+                return attr_res = false; // error. invalid char
+            };
 
-			if (j + 1 < l) {
-				w = s.charCodeAt(j + 1);
+            if (j + 1 < l) {
+                w = s.charCodeAt(j + 1);
 
-				if (w > 32 || w < 9 || (w < 32 && w > 13)) {
-					// error. invalid char
-					return attr_res = false;
-				};
-			};
+                if (w > 32 || w < 9 || (w < 32 && w > 13)) {
+                    // error. invalid char
+                    return attr_res = false;
+                };
+            };
 
 
-			value = s.substring(i, j);
+            value = s.substring(i, j);
             res = res || {};
-			i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
+            i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
 
-			if (isNamespace) { //
+            if (isNamespace) { //
                 xmlnsAlias = nsmatrix['xmlns'];
 
-				if (hasSurmiseNS) {
-					// есть подозрение что в атрибутах присутствует xmlns
-					newalias = (name !== 'xmlns'
+                if (hasSurmiseNS) {
+                    // есть подозрение что в атрибутах присутствует xmlns
+                    newalias = (name !== 'xmlns'
                         ? name.charCodeAt(0) === 120 && name.substr(0, 6) === 'xmlns:' && name.substr(6)
                         : 'xmlns'
                     );
 
                     if (newalias) {
-						alias = useNS[unEntities(value)];
+                        alias = useNS[unEntities(value)];
 
-						if (alias) {
-							if (nsmatrix[newalias] !== alias) {
-								if (!hasNewMatrix) {
-									hasNewMatrix = true;
-									nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
-									nsmatrix = nn;
-								};
+                        if (alias) {
+                            if (nsmatrix[newalias] !== alias) {
+                                if (!hasNewMatrix) {
+                                    hasNewMatrix = true;
+                                    nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
+                                    nsmatrix = nn;
+                                };
 
-								nsmatrix[newalias] = alias;
-							};
-						} else {
-							if (nsmatrix[newalias]) {
-								if (!hasNewMatrix) {
-									hasNewMatrix = true;
-									nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
-									nsmatrix = nn;
-								};
+                                nsmatrix[newalias] = alias;
+                            };
+                        } else {
+                            if (nsmatrix[newalias]) {
+                                if (!hasNewMatrix) {
+                                    hasNewMatrix = true;
+                                    nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
+                                    nsmatrix = nn;
+                                };
 
-								nsmatrix[newalias] = false;
-							};
-						};
+                                nsmatrix[newalias] = false;
+                            };
+                        };
 
-						res[name] = value;
-						continue;
-					};
+                        res[name] = value;
+                        continue;
+                    };
 
-					attrList.push(name, value);
-					continue;
-				};
+                    attrList.push(name, value);
+                    continue;
+                };
 
-				w = name.length;
-				while(--w) {
-					if (name.charCodeAt(w) === 58) { // ':'
-						if (nsAttrName = nsmatrix[name.substring(0, w)] ) {
+                w = name.length;
+                while(--w) {
+                    if (name.charCodeAt(w) === 58) { // ':'
+                        if (nsAttrName = nsmatrix[name.substring(0, w)] ) {
                             nsAttrName = xmlnsAlias === nsAttrName ? name.substr(w + 1) : nsAttrName + name.substr(w);
-							res[nsAttrName + name.substr(w)] = value;
-						};
-						continue aa;
+                            res[nsAttrName + name.substr(w)] = value;
+                        };
+                        continue aa;
 
-						// 'xml:base' ???
-					};
-				};
-			};
+                        // 'xml:base' ???
+                    };
+                };
+            };
 
-			res[name] = value;
-		};
+            res[name] = value;
+        };
 
 
-		if (!ok) {
-			return attr_res = true;  // атрибутов нет, ошибок тоже нет
-		};
+        if (!ok) {
+            return attr_res = true;  // атрибутов нет, ошибок тоже нет
+        };
 
-		if (hasSurmiseNS)  {
+        if (hasSurmiseNS)  {
             xmlnsAlias = nsmatrix['xmlns'];
 
-			bb:
-			for (i = 0, l = attrList.length; i < l; i++) {
-				name = attrList[i++];
+            bb:
+            for (i = 0, l = attrList.length; i < l; i++) {
+                name = attrList[i++];
 
-				w = name.length;
-				while(--w) { // name.indexOf(':')
+                w = name.length;
+                while(--w) { // name.indexOf(':')
                     if (name.charCodeAt(w) !== 58) { // ':'
                         continue;
                     };
@@ -400,120 +400,120 @@ function EasySAXParser() {
                     };
 
                     continue bb;
-				};
+                };
 
-				res[name] = attrList[i];
-			};
-		};
+                res[name] = attrList[i];
+            };
+        };
 
-		return attr_res = res;
-	};
+        return attr_res = res;
+    };
 
 
-	// xml - string
-	function parse(xml) {
-		var u
-		, xml = ('' + xml)
-		, stacknsmatrix = []
-		, nodestack = []
-		, tagstart = false
-		, tagend = false
-		, j = 0, i = 0
-		, x, y, q, w
-		, stopIndex = 0
-		, _nsmatrix
-		, xmlns
-		, elem
-		, stop // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
-		;
+    // xml - string
+    function parse(xml) {
+        var u
+        , xml = ('' + xml)
+        , stacknsmatrix = []
+        , nodestack = []
+        , tagstart = false
+        , tagend = false
+        , j = 0, i = 0
+        , x, y, q, w
+        , stopIndex = 0
+        , _nsmatrix
+        , xmlns
+        , elem
+        , stop // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
+        ;
 
-		function getStringNode() {
-			return xml.substring(i, j + 1)
-		};
+        function getStringNode() {
+            return xml.substring(i, j + 1)
+        };
 
-		while(j !== -1) {
-			stop = stopIndex > 0;
+        while(j !== -1) {
+            stop = stopIndex > 0;
 
-			if (xml.charCodeAt(j) === 60) { // "<"
-				i = j;
-			} else {
-				i = xml.indexOf('<', j);
-			};
+            if (xml.charCodeAt(j) === 60) { // "<"
+                i = j;
+            } else {
+                i = xml.indexOf('<', j);
+            };
 
-			if (i === -1) { // конец разбора
-				if (nodestack.length) {
-					onError(returnError = 'end file');
-					return;
-				};
-
-				return;
-			};
-
-			if (j !== i && !stop) {
-				onTextNode(xml.substring(j, i), unEntities);
-				if (parseStop) {
+            if (i === -1) { // конец разбора
+                if (nodestack.length) {
+                    onError(returnError = 'end file');
                     return;
                 };
-			};
 
-			w = xml.charCodeAt(i+1);
+                return;
+            };
 
-			if (w === 33) { // "!"
-				w = xml.charCodeAt(i+2);
-				if (w === 91 && xml.substr(i + 3, 6) === 'CDATA[') { // 91 == "["
-					j = xml.indexOf(']]>', i);
-					if (j === -1) {
-						onError(returnError = 'cdata');
-						return;
-					};
+            if (j !== i && !stop) {
+                onTextNode(xml.substring(j, i), unEntities);
+                if (parseStop) {
+                    return;
+                };
+            };
 
-					if (!stop) {
-						onCDATA(xml.substring(i + 9, j), false);
-						if (parseStop) {
-                            return;
-                        };
-					};
+            w = xml.charCodeAt(i+1);
 
-					j += 3;
-					continue;
-				};
-
-
-				if (w === 45 && xml.charCodeAt(i + 3) === 45) { // 45 == "-"
-					j = xml.indexOf('-->', i);
-					if (j === -1) {
-						onError(returnError = 'expected -->');
-						return;
-					};
-
-
-					if (is_onComment && !stop) {
-						onComment(xml.substring(i + 4, j), unEntities);
-						if (parseStop) {
-                            return;
-                        };
-					};
-
-					j += 3;
-					continue;
-				};
-
-				j = xml.indexOf('>', i + 1);
-				if (j === -1) {
-					onError(returnError = 'expected ">"');
-					return;
-				};
-
-				if (is_onAttention && !stop) {
-					onAttention(xml.substring(i, j + 1), unEntities);
-					if (parseStop) {
+            if (w === 33) { // "!"
+                w = xml.charCodeAt(i+2);
+                if (w === 91 && xml.substr(i + 3, 6) === 'CDATA[') { // 91 == "["
+                    j = xml.indexOf(']]>', i);
+                    if (j === -1) {
+                        onError(returnError = 'cdata');
                         return;
                     };
-				};
 
-				j += 1;
-				continue;
-			};
+                    if (!stop) {
+                        onCDATA(xml.substring(i + 9, j), false);
+                        if (parseStop) {
+                            return;
+                        };
+                    };
+
+                    j += 3;
+                    continue;
+                };
+
+
+                if (w === 45 && xml.charCodeAt(i + 3) === 45) { // 45 == "-"
+                    j = xml.indexOf('-->', i);
+                    if (j === -1) {
+                        onError(returnError = 'expected -->');
+                        return;
+                    };
+
+
+                    if (is_onComment && !stop) {
+                        onComment(xml.substring(i + 4, j), unEntities);
+                        if (parseStop) {
+                            return;
+                        };
+                    };
+
+                    j += 3;
+                    continue;
+                };
+
+                j = xml.indexOf('>', i + 1);
+                if (j === -1) {
+                    onError(returnError = 'expected ">"');
+                    return;
+                };
+
+                if (is_onAttention && !stop) {
+                    onAttention(xml.substring(i, j + 1), unEntities);
+                    if (parseStop) {
+                        return;
+                    };
+                };
+
+                j += 1;
+                continue;
+            };
 
             if (w === 63) { // "?"
                 j = xml.indexOf('?>', i);
@@ -533,176 +533,176 @@ function EasySAXParser() {
                 continue;
             };
 
-			j = xml.indexOf('>', i + 1);
+            j = xml.indexOf('>', i + 1);
 
-			if (j == -1) { // error
-				onError(returnError = '...>');
-				return;
-			};
+            if (j == -1) { // error
+                onError(returnError = '...>');
+                return;
+            };
 
-			attr_res = true; // атрибутов нет
+            attr_res = true; // атрибутов нет
 
-			//if (xml.charCodeAt(i+1) === 47) { // </...
-			if (w === 47) { // </...
-				tagstart = false;
-				tagend = true;
+            //if (xml.charCodeAt(i+1) === 47) { // </...
+            if (w === 47) { // </...
+                tagstart = false;
+                tagend = true;
 
-				// проверяем что должен быть закрыт тотже тег что и открывался
-				x = elem = nodestack.pop();
-				q = i + 2 + x.length;
+                // проверяем что должен быть закрыт тотже тег что и открывался
+                x = elem = nodestack.pop();
+                q = i + 2 + x.length;
 
-				if (xml.substring(i + 2, q) !== x) {
-					onError(returnError = 'close tagname');
-					return;
-				};
+                if (xml.substring(i + 2, q) !== x) {
+                    onError(returnError = 'close tagname');
+                    return;
+                };
 
-				// проверим что в закрываюшем теге нет лишнего
-				for(; q < j; q++) {
-					w = xml.charCodeAt(q);
+                // проверим что в закрываюшем теге нет лишнего
+                for(; q < j; q++) {
+                    w = xml.charCodeAt(q);
 
-					if (w === 32 || (w > 8 && w < 14)) {  // \f\n\r\t\v пробел
-						continue;
-					};
+                    if (w === 32 || (w > 8 && w < 14)) {  // \f\n\r\t\v пробел
+                        continue;
+                    };
 
-					onError(returnError = 'close tag');
-					return;
-				};
+                    onError(returnError = 'close tag');
+                    return;
+                };
 
-			} else {
-				if (xml.charCodeAt(j - 1) ===  47) { // .../>
-					x = elem = xml.substring(i + 1, j - 1);
+            } else {
+                if (xml.charCodeAt(j - 1) ===  47) { // .../>
+                    x = elem = xml.substring(i + 1, j - 1);
 
-					tagstart = true;
-					tagend = true;
+                    tagstart = true;
+                    tagend = true;
 
-				} else {
-					x = elem = xml.substring(i + 1, j);
+                } else {
+                    x = elem = xml.substring(i + 1, j);
 
-					tagstart = true;
-					tagend = false;
-				};
+                    tagstart = true;
+                    tagend = false;
+                };
 
-				if ( !(w > 96  && w < 123 || w > 64 && w < 91) ) {
-					onError(returnError = 'first char nodeName');
-					return;
-				};
+                if ( !(w > 96  && w < 123 || w > 64 && w < 91) ) {
+                    onError(returnError = 'first char nodeName');
+                    return;
+                };
 
-				for (q = 1, y = x.length; q < y; q++) {
-					w = x.charCodeAt(q);
+                for (q = 1, y = x.length; q < y; q++) {
+                    w = x.charCodeAt(q);
 
-					if ( w > 96 && w < 123 || w > 64 && w < 91 || w > 47 && w < 59 || w === 45 || w === 95) {
-						continue;
-					};
+                    if ( w > 96 && w < 123 || w > 64 && w < 91 || w > 47 && w < 59 || w === 45 || w === 95) {
+                        continue;
+                    };
 
-					if (w === 32 || (w < 14 && w > 8)) { // \f\n\r\t\v пробел
-						elem = x.substring(0, q)
-						attr_res = null; // возможно есть атирибуты
-						break;
-					};
+                    if (w === 32 || (w < 14 && w > 8)) { // \f\n\r\t\v пробел
+                        elem = x.substring(0, q)
+                        attr_res = null; // возможно есть атирибуты
+                        break;
+                    };
 
-					onError(returnError = 'invalid nodeName');
-					return;
-				};
+                    onError(returnError = 'invalid nodeName');
+                    return;
+                };
 
-				if (!tagend) {
-					nodestack.push(elem);
-				};
-			};
+                if (!tagend) {
+                    nodestack.push(elem);
+                };
+            };
 
 
-			if (isNamespace) {
-				if (stop) {
-					if (tagend) {
-						if (!tagstart) {
-							if (--stopIndex === 0) {
-								nsmatrix = stacknsmatrix.pop();
-							};
-						};
+            if (isNamespace) {
+                if (stop) {
+                    if (tagend) {
+                        if (!tagstart) {
+                            if (--stopIndex === 0) {
+                                nsmatrix = stacknsmatrix.pop();
+                            };
+                        };
 
-					} else {
-						stopIndex += 1;
-					};
+                    } else {
+                        stopIndex += 1;
+                    };
 
-					j += 1;
-					continue;
-				};
+                    j += 1;
+                    continue;
+                };
 
-				_nsmatrix = nsmatrix;
+                _nsmatrix = nsmatrix;
 
                 if (tagstart) {
-					stacknsmatrix.push(nsmatrix);
+                    stacknsmatrix.push(nsmatrix);
 
-					if (attr_res !== true) {
-						if (hasSurmiseNS = x.indexOf('xmlns', q) !== -1) { // есть подозрение на xmlns
-							attr_posstart = q;
-							attr_string = x;
+                    if (attr_res !== true) {
+                        if (hasSurmiseNS = x.indexOf('xmlns', q) !== -1) { // есть подозрение на xmlns
+                            attr_posstart = q;
+                            attr_string = x;
 
-							getAttrs();
+                            getAttrs();
 
-							hasSurmiseNS = false;
-						};
-					};
-				};
+                            hasSurmiseNS = false;
+                        };
+                    };
+                };
 
-				w = elem.indexOf(':');
-				if (w !== -1) {
-					xmlns = nsmatrix[elem.substring(0, w)];
-					elem = elem.substr(w + 1);
+                w = elem.indexOf(':');
+                if (w !== -1) {
+                    xmlns = nsmatrix[elem.substring(0, w)];
+                    elem = elem.substr(w + 1);
 
-				} else {
-					xmlns = nsmatrix.xmlns;
-				};
+                } else {
+                    xmlns = nsmatrix.xmlns;
+                };
 
 
-				if (!xmlns) {
-					if (tagend) {
-						if (tagstart) {
-							nsmatrix = _nsmatrix;
-						} else {
-							nsmatrix = stacknsmatrix.pop();
-						};
+                if (!xmlns) {
+                    if (tagend) {
+                        if (tagstart) {
+                            nsmatrix = _nsmatrix;
+                        } else {
+                            nsmatrix = stacknsmatrix.pop();
+                        };
 
-					} else {
-						stopIndex = 1; // первый элемент для которого не определено пространство имен
-						attr_res = true;
-					};
+                    } else {
+                        stopIndex = 1; // первый элемент для которого не определено пространство имен
+                        attr_res = true;
+                    };
 
-					j += 1;
-					continue;
-				};
+                    j += 1;
+                    continue;
+                };
 
-				elem = xmlns + ':' + elem;
-			};
+                elem = xmlns + ':' + elem;
+            };
 
-			if (tagstart) {
-				attr_posstart = q;
-				attr_string = x;
+            if (tagstart) {
+                attr_posstart = q;
+                attr_string = x;
 
-				onStartNode(elem, getAttrs, unEntities, tagend, getStringNode);
-				if (parseStop) {
-					return;
-				};
+                onStartNode(elem, getAttrs, unEntities, tagend, getStringNode);
+                if (parseStop) {
+                    return;
+                };
 
-				attr_res = true;
-			};
+                attr_res = true;
+            };
 
-			if (tagend) {
-				onEndNode(elem, unEntities, tagstart, getStringNode);
-				if (parseStop) {
-					return;
-				};
+            if (tagend) {
+                onEndNode(elem, unEntities, tagstart, getStringNode);
+                if (parseStop) {
+                    return;
+                };
 
-				if (isNamespace) {
-					if (tagstart) {
-						nsmatrix = _nsmatrix;
-					} else {
-						nsmatrix = stacknsmatrix.pop();
-					};
-				};
-			};
+                if (isNamespace) {
+                    if (tagstart) {
+                        nsmatrix = _nsmatrix;
+                    } else {
+                        nsmatrix = stacknsmatrix.pop();
+                    };
+                };
+            };
 
-			j += 1;
-		};
-	};
+            j += 1;
+        };
+    };
 };
 
