@@ -121,7 +121,6 @@ function unEntities(s) {
 };
 
 
-
 function EasySAXParser() {
     'use strict';
 
@@ -247,12 +246,12 @@ function EasySAXParser() {
         , value
         , alias
         , name
-        , res
+        , res = {}
         , ok
-        , w = 0
+        , w
         ;
+        
 
-        aa:
         for(; i < l; i++) {
             w = s.charCodeAt(i);
 
@@ -313,67 +312,63 @@ function EasySAXParser() {
 
 
             value = s.substring(i, j);
-            res = res || {};
             i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
+            
+            if (!isNamespace) { //
+                res[name] = value;
+                continue;
+            };
 
-            if (isNamespace) { //
-                xmlnsAlias = nsmatrix['xmlns'];
+            if (hasSurmiseNS) {
+                // есть подозрение что в атрибутах присутствует xmlns
+                newalias = (name !== 'xmlns'
+                    ? name.charCodeAt(0) === 120 && name.substr(0, 6) === 'xmlns:' && name.substr(6)
+                    : 'xmlns'
+                );
 
-                if (hasSurmiseNS) {
-                    // есть подозрение что в атрибутах присутствует xmlns
-                    newalias = (name !== 'xmlns'
-                        ? name.charCodeAt(0) === 120 && name.substr(0, 6) === 'xmlns:' && name.substr(6)
-                        : 'xmlns'
-                    );
+                if (newalias) {
+                    alias = useNS[unEntities(value)];
 
-                    if (newalias) {
-                        alias = useNS[unEntities(value)];
-
-                        if (alias) {
-                            if (nsmatrix[newalias] !== alias) {
-                                if (!hasNewMatrix) {
-                                    hasNewMatrix = true;
-                                    nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
-                                    nsmatrix = nn;
-                                };
-
-                                nsmatrix[newalias] = alias;
+                    if (alias) {
+                        if (nsmatrix[newalias] !== alias) {
+                            if (!hasNewMatrix) {
+                                hasNewMatrix = true;
+                                nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
+                                nsmatrix = nn;
                             };
-                        } else {
-                            if (nsmatrix[newalias]) {
-                                if (!hasNewMatrix) {
-                                    hasNewMatrix = true;
-                                    nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
-                                    nsmatrix = nn;
-                                };
 
-                                nsmatrix[newalias] = false;
-                            };
+                            nsmatrix[newalias] = alias;
                         };
+                    } else {
+                        if (nsmatrix[newalias]) {
+                            if (!hasNewMatrix) {
+                                hasNewMatrix = true;
+                                nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
+                                nsmatrix = nn;
+                            };
 
-                        res[name] = value;
-                        continue;
+                            nsmatrix[newalias] = false;
+                        };
                     };
 
-                    attrList.push(name, value);
+                    res[name] = value;
                     continue;
                 };
 
-                w = name.length;
-                while(--w) {
-                    if (name.charCodeAt(w) === 58) { // ':'
-                        if (nsAttrName = nsmatrix[name.substring(0, w)] ) {
-                            nsAttrName = xmlnsAlias === nsAttrName ? name.substr(w + 1) : nsAttrName + name.substr(w);
-                            res[nsAttrName + name.substr(w)] = value;
-                        };
-                        continue aa;
-
-                        // 'xml:base' ???
-                    };
-                };
+                attrList.push(name, value);
+                continue;
             };
 
-            res[name] = value;
+            w = name.indexOf(':');
+            if (w === -1) {
+                res[name] = value;
+                continue;
+            };
+
+            if (nsAttrName = nsmatrix[name.substring(0, w)]) {
+                nsAttrName = nsmatrix['xmlns'] === nsAttrName ? name.substr(w + 1) : nsAttrName + name.substr(w);
+                res[nsAttrName + name.substr(w)] = value;
+            };
         };
 
 
@@ -384,24 +379,17 @@ function EasySAXParser() {
         if (hasSurmiseNS)  {
             xmlnsAlias = nsmatrix['xmlns'];
 
-            bb:
             for (i = 0, l = attrList.length; i < l; i++) {
                 name = attrList[i++];
 
-                w = name.length;
-                while(--w) { // name.indexOf(':')
-                    if (name.charCodeAt(w) !== 58) { // ':'
-                        continue;
-                    };
-
+                w = name.indexOf(':');
+                if (w !== -1) {
                     if (nsAttrName = nsmatrix[name.substring(0, w)]) {
                         nsAttrName = xmlnsAlias === nsAttrName ? name.substr(w + 1) : nsAttrName + name.substr(w);
                         res[nsAttrName] = attrList[i];
                     };
-
-                    continue bb;
+                    continue;
                 };
-
                 res[name] = attrList[i];
             };
         };
@@ -590,7 +578,7 @@ function EasySAXParser() {
                 for (q = 1, y = x.length; q < y; q++) {
                     w = x.charCodeAt(q);
 
-                    if ( w > 96 && w < 123 || w > 64 && w < 91 || w > 47 && w < 59 || w === 45 || w === 95) {
+                    if (w > 96 && w < 123 || w > 64 && w < 91 || w > 47 && w < 59 || w === 45 || w === 95) {
                         continue;
                     };
 
