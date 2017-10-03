@@ -38,6 +38,15 @@ test({
     ],
 });
 
+test({
+    xml: '<_a><:b></:b></_a>',
+    to: [
+        ['startNode', '_a', true, false],
+        ['startNode', ':b', true, false],
+        ['endNode', ':b', false],
+        ['endNode', '_a', false],
+    ],
+});
 
 test({
     xml: '<a><!--comment text--></a>',
@@ -89,6 +98,15 @@ test({
         ['endNode', 'root', false],
     ],
 });
+
+test({
+    xml: '<root _abc="abc=abc" :abc="abc"></root>',
+    to: [
+        ['startNode', 'root', {_abc: 'abc=abc', ':abc': 'abc'}, false],
+        ['endNode', 'root', false],
+    ],
+});
+
 
 test({
     xml: '<root attr1="first"\t attr2="second"/>',
@@ -201,3 +219,15 @@ test({
         ['endNode', 'atom:feed'],
     ],
 });
+
+test({
+    xml: '<feed xmlns="http://www.w3.org/2005/Atom" xmlns:="http://search.yahoo.com/mrss/" id="aa" :title="bb"><:text/></feed>',
+    ns: 'atom',
+    to: [
+        ['startNode', 'atom:feed', {id: 'aa', 'media:title': 'bb'}],
+        ['startNode', 'media:text'],
+        ['endNode', 'media:text'],
+        ['endNode', 'atom:feed'],
+    ],
+});
+

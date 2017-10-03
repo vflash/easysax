@@ -120,6 +120,14 @@ function unEntities(s) {
     return s;
 };
 
+function cloneMatrixNS(nsmatrix) {
+    var nn = {};
+    for (var n in nsmatrix) {
+        nn[n] = nsmatrix[n];
+    };
+    return nn;
+};
+
 
 function EasySAXParser() {
     'use strict';
@@ -240,7 +248,6 @@ function EasySAXParser() {
         , i = attr_posstart
         , s = attr_string
         , l = s.length
-        , nn, j, n
         , hasNewMatrix
         , newalias
         , value
@@ -249,8 +256,9 @@ function EasySAXParser() {
         , res = {}
         , ok
         , w
+        , j
         ;
-        
+
 
         for(; i < l; i++) {
             w = s.charCodeAt(i);
@@ -260,7 +268,9 @@ function EasySAXParser() {
             };
 
             if (w < 65 || w > 122 || (w > 90 && w < 97) ) { // ожидаем символ
-                return attr_res = false; // error. invalid first char
+                if (w !== 95 && w !== 58) { // char 95"_" 58":"
+                    return attr_res = false; // error. invalid first char
+                };
             };
 
             for(j = i + 1; j < l; j++) { // проверяем все символы имени атрибута
@@ -313,7 +323,7 @@ function EasySAXParser() {
 
             value = s.substring(i, j);
             i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
-            
+
             if (!isNamespace) { //
                 res[name] = value;
                 continue;
@@ -322,19 +332,18 @@ function EasySAXParser() {
             if (hasSurmiseNS) {
                 // есть подозрение что в атрибутах присутствует xmlns
                 newalias = (name !== 'xmlns'
-                    ? name.charCodeAt(0) === 120 && name.substr(0, 6) === 'xmlns:' && name.substr(6)
+                    ? name.charCodeAt(0) === 120 && name.substr(0, 6) === 'xmlns:' ? name.substr(6) : null
                     : 'xmlns'
                 );
 
-                if (newalias) {
+                if (newalias !== null) {
                     alias = useNS[unEntities(value)];
 
                     if (alias) {
                         if (nsmatrix[newalias] !== alias) {
                             if (!hasNewMatrix) {
+                                nsmatrix = cloneMatrixNS(nsmatrix);
                                 hasNewMatrix = true;
-                                nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
-                                nsmatrix = nn;
                             };
 
                             nsmatrix[newalias] = alias;
@@ -342,9 +351,8 @@ function EasySAXParser() {
                     } else {
                         if (nsmatrix[newalias]) {
                             if (!hasNewMatrix) {
+                                nsmatrix = cloneMatrixNS(nsmatrix);
                                 hasNewMatrix = true;
-                                nn = {}; for (n in nsmatrix) nn[n] = nsmatrix[n];
-                                nsmatrix = nn;
                             };
 
                             nsmatrix[newalias] = false;
@@ -570,7 +578,7 @@ function EasySAXParser() {
                     tagend = false;
                 };
 
-                if ( !(w > 96  && w < 123 || w > 64 && w < 91) ) {
+                if (!(w > 96  && w < 123 || w > 64 && w < 91 || w === 95 || w === 58)) { // char 95"_" 58":"
                     onError(returnError = 'first char nodeName');
                     return;
                 };
