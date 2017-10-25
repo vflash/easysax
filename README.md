@@ -11,39 +11,61 @@ EASYSAX - pure javascript sax-style parser for xml
 
 
 
-BENCHMARK
+BENCHMARK 
 ---------------------------------------------------
-
-**benchmark/test.js, parse file #1**
-```
-sax-js: 12671ms
-libxmljs: 11311ms
-expat: 6118ms
-expat buffer: 5278ms
-easysax : 1739ms  //  namespace--on, attr()--on , entity_decode--on
-easysax: 1035ms   //  namespace--off, attr()--on , entity_decode--on
-easysax: 740ms    //  namespace--off, attr()--off , entity_decode--off
-```
+https://github.com/vflash/sax-benchmark
 
 
-**benchmark/test.js, parse file #2 (много атрибутов)**
+**sh: node bench-01.js**
 ```
-sax-js: 84060ms
-libxmljs: 48919ms
-expat: 39444ms
-expat buffer: 35375ms
-easysax: 14655ms  //  namespace--on, attr()--on , entity_decode--on
-easysax: 9874ms   //  namespace--off, attr()--on , entity_decode--on
-easysax: 3531ms   //  namespace--off, attr()--off , entity_decode--on
-easysax: 2954ms   //  namespace--off, attr()--off , entity_decode--off
+count - 100000
+size - 25
+
+saxjs : 346.182ms
+libxml: 852.098ms
+expat : 705.867ms
+expat buffer: 712.212ms
+ltx: 137.998ms
+easysax ns=on uq=on attr=on   : 100.050ms
+easysax ns=off uq=on attr=on  : 82.520ms
+easysax ns=off uq=off attr=on : 69.133ms
+easysax ns=off uq=off attr=off: 29.226ms
+```
+
+**sh: node bench-02.js**
+```
+count - 1000
+size - 22750
+
+saxjs : 1484.910ms
+libxml: 1058.808ms
+expat : 1028.151ms
+expat buffer: 853.925ms
+ltx: 359.173ms
+easysax ns=on uq=on attr=on   : 151.511ms
+easysax ns=off uq=on attr=on  : 114.646ms
+easysax ns=off uq=off attr=on : 88.604ms
+easysax ns=off uq=off attr=off: 80.773ms
+```
+
+**sh: node bench-03.js**
+```
+count - 1000
+size - 121786
+
+saxjs : 10765.309ms
+libxml: 5387.832ms
+expat : 6734.018ms
+expat buffer: 5865.209ms
+ltx: 2953.910ms
+easysax ns=on uq=on attr=on   : 1769.676ms
+easysax ns=off uq=on attr=on  : 1475.585ms
+easysax ns=off uq=off attr=on : 1214.665ms
+easysax ns=off uq=off attr=off: 405.799ms
 ```
 
 
-**demo/example.js, parse file #2**
-```
-1,000 pages for: 13335ms -  attr()--all
-1,000 pages for: 7300ms  -  attr()--on_request
-```
+
 
 
 ##Пример использования##
