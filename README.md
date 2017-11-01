@@ -9,9 +9,13 @@ EASYSAX - pure javascript sax-style parser for xml
 Парсер был написан для RSS ридера http://zzreader.com
 На конец 2012 года остается самым быстрым SAX парсером под NODE.JS
 
+Install
+---------------------------------------------------
+```
+$ npm install easysax
+```
 
-
-BENCHMARK 
+Benchmark
 ---------------------------------------------------
 https://github.com/vflash/sax-benchmark
 
