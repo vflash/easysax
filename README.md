@@ -1,13 +1,13 @@
 EASYSAX - pure javascript sax-style parser for xml
 ==================================================
-Простой и быстрый SAX парсер XML файлов.
-Реализован по принципу парсить только то что нужно и как можно быстрее.
-Парсер не потоковый, и не расчитан на гиганские файлы. Весь XML должен быть в памяти.
-Встроенный уникальный механизм работы с пространсвами имен.
+Простой и быстрый SAX парсер XML.
+Парсер не потоковый, и не расчитан на гиганские файлы. 
+Весь XML должен быть в памяти.
+Встроен механизм работы с пространсвами имен.
 
 
 Парсер был написан для RSS ридера http://zzreader.com
-На конец 2012 года остается самым быстрым SAX парсером под NODE.JS
+На конец 2017 года остается самым быстрым SAX парсером XML под NODE.JS
 
 Install
 ---------------------------------------------------
@@ -99,17 +99,16 @@ parser.on('error', function(msg) {
 });
 
 
-parser.on('startNode', function(elem, attr, uq, str, tagend) {
-	// elem -- (string) название элемента. при указании пространства имен, то автоматически подставляется префикс
-	// attr() -- (function) парсит атрибуты и возврашает обьект. 
-	// uq() -- (function) встроенный xml декодер.  пример: uq(&lt;a&gt;)
-	// str -- (string) нераспарсенная строка элемента. пример: <item title="text" id="x345">
-	// tagend -- (boolean) флаг что элемент пустой
-	
+parser.on('startNode', function(elementName, getAttr, unEntities, isTagEnd, getStringNode) {
+	// elementName -- (string) название элемента. при указании пространства имен, то автоматически подставляется префикс
+	// getAttr() -- (function) парсит атрибуты и возврашает обьект. 
+	// unEntities() -- (function) встроенный xml декодер.  пример: uq("&lt;a&gt;")
+	// isTagEnd -- (boolean) флаг что элемент пустой "<elem/>"
+	// getStringNode() -- (function) возвращает нераспарсенная строка элемента. Пример: <item title="text" id="x345">	
 });
 
-parser.on('endNode', function(elem, uq, str, tagstart) {
-	// ...
+parser.on('endNode', function(elementName, unEntities, isTagStart, getStringNode) {
+	// isTagStart -- (boolean) флаг что элемент пустой "<elem/>"
 });
 
 parser.on('textNode', function(text, uq) {
@@ -130,11 +129,7 @@ parser.on('comment', function(text) {
 //parser.on('attention', function() {}); // <!XXXXX zzzz="eeee">
 
 
-// parser.parse(arg1, arg2)
-// первый аргумент -- (String) строка xml
-// второй аргумент -- пространство имен по умолчанию
-
-parser.parse(xml, 'rss')
+parser.parse(xml); // xml -- (String) строка xml
 
 ```
 
