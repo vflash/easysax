@@ -231,3 +231,62 @@ test({
     ],
 });
 
+test({
+    xml: '<feed xmlns="http://www.w3.org/2005/Atom"><title xmlns="http://search.yahoo.com/mrss/"/><text>text</text></feed>',
+    ns: 'atom',
+    to: [
+        ['startNode', 'atom:feed'],
+        ['startNode', 'media:title'],
+        ['endNode', 'media:title'],
+        ['startNode', 'atom:text'],
+        ['textNode', 'text'],
+        ['endNode', 'atom:text'],
+        ['endNode', 'atom:feed'],
+    ],
+});
+
+test({
+    xml: '<feed xmlns="http://www.w3.org/2005/Atom" xmlns:xxx="xxx.xx"><xxx:title>text</xxx:title></feed>',
+    ns: 'atom',
+    to: [
+        ['unknownNS', 'xxx.xx'],
+        ['startNode', 'atom:feed'],
+        ['endNode', 'atom:feed'],
+    ],
+});
+
+test({
+    xml: '<feed xmlns="http://www.w3.org/2005/Atom"><title xmlns="xxx.xx">text</title></feed>',
+    ns: 'atom',
+    to: [
+        ['startNode', 'atom:feed'],
+        ['unknownNS', 'xxx.xx'],
+        ['endNode', 'atom:feed'],
+    ],
+});
+
+test({
+    xml: '<feed xmlns="http://www.w3.org/2005/Atom" xmlns:xxx="AAA" xxx:id="22"><xxx:title id="22">text</xxx:title></feed>',
+    ns: 'atom',
+    to: [
+        ['unknownNS'],
+        ['startNode', 'atom:feed', {'aaa:id': '22'}],
+        ['startNode', 'aaa:title', {id: '22', }],
+        ['textNode', 'text'],
+        ['endNode', 'aaa:title'],
+        ['endNode', 'atom:feed'],
+    ],
+});
+
+test({
+    xml: '<feed xmlns="http://www.w3.org/2005/Atom"><title xmlns="AAA">text</title></feed>',
+    ns: 'atom',
+    to: [
+        ['startNode', 'atom:feed'],
+        ['unknownNS'],
+        ['startNode', 'aaa:title'],
+        ['textNode', 'text'],
+        ['endNode', 'aaa:title'],
+        ['endNode', 'atom:feed'],
+    ],
+});

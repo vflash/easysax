@@ -91,6 +91,7 @@ var xharsQuot = {constructor: false
     , para: '\u00B6'
 };
 
+function NULL_FUNC() {};
 
 function replaceEntities(s, d, x, z) {
     if (z) {
@@ -130,16 +131,12 @@ function cloneMatrixNS(nsmatrix) {
 
 
 function EasySAXParser() {
-    'use strict';
-
     if (!this) {
         return null;
     };
 
-    function nullFunc() {};
-
-    var onTextNode = nullFunc, onStartNode = nullFunc, onEndNode = nullFunc, onCDATA = nullFunc, onError = nullFunc, onComment, onQuestion, onAttention;
-    var is_onComment, is_onQuestion, is_onAttention;
+    var onTextNode = NULL_FUNC, onStartNode = NULL_FUNC, onEndNode = NULL_FUNC, onCDATA = NULL_FUNC, onError = NULL_FUNC, onComment, onQuestion, onAttention, onUnknownNS;
+    var is_onComment = false, is_onQuestion = false, is_onAttention = false, is_onUnknownNS = false;
 
     var default_xmlns;
     var hasSurmiseNS = false;
@@ -150,19 +147,19 @@ function EasySAXParser() {
     var useNS;
     var xmlns;
 
-
     this.on = function(name, cb) {
         if (typeof cb !== 'function') {
             if (cb !== null) return;
         };
 
         switch(name) {
-            case 'startNode': onStartNode = cb || nullFunc; break;
-            case 'textNode': onTextNode = cb || nullFunc; break;
-            case 'endNode': onEndNode = cb || nullFunc; break;
-            case 'error': onError = cb || nullFunc; break;
-            case 'cdata': onCDATA = cb || nullFunc; break;
+            case 'startNode': onStartNode = cb || NULL_FUNC; break;
+            case 'textNode': onTextNode = cb || NULL_FUNC; break;
+            case 'endNode': onEndNode = cb || NULL_FUNC; break;
+            case 'error': onError = cb || NULL_FUNC; break;
+            case 'cdata': onCDATA = cb || NULL_FUNC; break;
 
+            case 'unknownNS': onUnknownNS = cb; is_onUnknownNS = !!cb; break;
             case 'attention': onAttention = cb; is_onAttention = !!cb; break; // <!XXXXX zzzz="eeee">
             case 'question': onQuestion = cb; is_onQuestion = !!cb; break; // <? ....  ?>
             case 'comment': onComment = cb; is_onComment = !!cb; break;
@@ -338,6 +335,9 @@ function EasySAXParser() {
 
                 if (newalias !== null) {
                     alias = useNS[unEntities(value)];
+                    if (is_onUnknownNS && !alias) {
+                        alias = onUnknownNS(value);
+                    };
 
                     if (alias) {
                         if (nsmatrix[newalias] !== alias) {

@@ -112,6 +112,10 @@ function test(options) {
         test('comment', text);
     });
 
+    parser.on('unknownNS', function(value) {
+        test('unknownNS', value);
+        return value === 'AAA' ? 'aaa' : (value === 'BBB' ? 'bbb' : null);
+    });
 
     parser.parse(options.xml);
     return error;
