@@ -1,7 +1,7 @@
 EASYSAX - pure javascript sax-style parser for xml
 ==================================================
 Простой и быстрый SAX парсер XML.
-Парсер не потоковый, и не расчитан на гиганские файлы. 
+Парсер не потоковый, и не расчитан на гиганские файлы.
 Весь XML должен быть в памяти.
 Встроен механизм работы с пространсвами имен.
 
@@ -30,10 +30,10 @@ libxml: 852.098ms
 expat : 705.867ms
 expat buffer: 712.212ms
 ltx: 137.998ms
-easysax ns=on uq=on attr=on   : 100.050ms
-easysax ns=off uq=on attr=on  : 82.520ms
-easysax ns=off uq=off attr=on : 69.133ms
-easysax ns=off uq=off attr=off: 29.226ms
+easysax ns=on  entityDecode=on  getAttr=on : 100.050ms
+easysax ns=off entityDecode=on  getAttr=on : 82.520ms
+easysax ns=off entityDecode=off getAttr=on : 69.133ms
+easysax ns=off entityDecode=off getAttr=off: 29.226ms
 ```
 
 **sh: node bench-02.js**
@@ -46,10 +46,10 @@ libxml: 1058.808ms
 expat : 1028.151ms
 expat buffer: 853.925ms
 ltx: 359.173ms
-easysax ns=on uq=on attr=on   : 151.511ms
-easysax ns=off uq=on attr=on  : 114.646ms
-easysax ns=off uq=off attr=on : 88.604ms
-easysax ns=off uq=off attr=off: 80.773ms
+easysax ns=on  entityDecode=on  getAttr=on : 151.511ms
+easysax ns=off entityDecode=on  getAttr=on : 114.646ms
+easysax ns=off entityDecode=off getAttr=on : 88.604ms
+easysax ns=off entityDecode=off getAttr=off: 80.773ms
 ```
 
 **sh: node bench-03.js**
@@ -62,10 +62,10 @@ libxml: 5387.832ms
 expat : 6734.018ms
 expat buffer: 5865.209ms
 ltx: 2953.910ms
-easysax ns=on uq=on attr=on   : 1769.676ms
-easysax ns=off uq=on attr=on  : 1475.585ms
-easysax ns=off uq=off attr=on : 1214.665ms
-easysax ns=off uq=off attr=off: 405.799ms
+easysax ns=on  entityDecode=on  getAttr=on : 1769.676ms
+easysax ns=off entityDecode=on  getAttr=on : 1475.585ms
+easysax ns=off entityDecode=off getAttr=on : 1214.665ms
+easysax ns=off entityDecode=off getAttr=off: 405.799ms
 ```
 
 
@@ -93,37 +93,32 @@ parser.ns('rss', {
 
 });
 
-
 parser.on('error', function(msg) {
 	// console.log('error - ' + msg);
 });
 
-
-parser.on('startNode', function(elementName, getAttr, unEntities, isTagEnd, getStringNode) {
+parser.on('startNode', function(elementName, getAttr, isTagEnd, getStringNode) {
 	// elementName -- (string) название элемента. при указании пространства имен, то автоматически подставляется префикс
-	// getAttr() -- (function) парсит атрибуты и возврашает обьект. 
-	// unEntities() -- (function) встроенный xml декодер.  пример: uq("&lt;a&gt;")
+	// getAttr() -- (function) парсит атрибуты и возврашает обьект.
 	// isTagEnd -- (boolean) флаг что элемент пустой "<elem/>"
-	// getStringNode() -- (function) возвращает нераспарсенная строка элемента. Пример: <item title="text" id="x345">	
+	// getStringNode() -- (function) возвращает нераспарсенная строка элемента. Пример: <item title="text" id="x345">
 });
 
-parser.on('endNode', function(elementName, unEntities, isTagStart, getStringNode) {
+parser.on('endNode', function(elementName, isTagStart, getStringNode) {
 	// isTagStart -- (boolean) флаг что элемент пустой "<elem/>"
 });
 
-parser.on('textNode', function(text, uq) {
-	// text -- (String) строковой элемент. пример: uq(text);
+parser.on('textNode', function(text) {
+	// text -- (String) строка текста
 });
 
 parser.on('cdata', function(text) {
-	// text -- (String) строковой элемент CDATA
+    // text -- (String) строка текста элемента CDATA
 });
-
 
 parser.on('comment', function(text) {
 	// text - (String) текст комментария
 });
-
 
 //parser.on('question', function() {}); // <? ... ?>
 //parser.on('attention', function() {}); // <!XXXXX zzzz="eeee">

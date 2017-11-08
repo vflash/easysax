@@ -1,5 +1,3 @@
-'use strict';
-
 /*
 new function() {
     var parser = new EasySAXParser();
@@ -11,29 +9,17 @@ new function() {
         'http://purl.org/rss/1.0/': 'rss',
     });
 
-    parser.on('error', function(msg) {
-        //console.log(msg)
+    parser.on('error', function(msgError) {
     });
 
-    parser.on('startNode', function(elem, attr, uq, tagend, getStrNode) {
-        attr();
-        return;
-        if (tagend) {
-            console.log('   '+str)
-        } else {
-            console.log('+  '+str)
-        };
+    parser.on('startNode', function(elemName, getAttr, isTagEnd, getStrNode) {
+        var attr = getAttr();
     });
 
-    parser.on('endNode', function(elem, uq, tagstart, str) {
-        return;
-        if (!tagstart) console.log('-  ' + str)
+    parser.on('endNode', function(elemName, isTagStart, getStrNode) {
     });
 
-    parser.on('textNode', function(s, uq) {
-        uq(s);
-        return
-        console.log('   '+s)
+    parser.on('textNode', function(text) {
     });
 
     parser.on('cdata', function(data) {
@@ -44,6 +30,7 @@ new function() {
         //console.log('--'+text+'--')
     });
 
+    //parser.on('unknownNS', function(key) {console.log('unknownNS: ' + key)});
     //parser.on('question', function() {}); // <? ... ?>
     //parser.on('attention', function() {}); // <!XXXXX zzzz="eeee">
 
@@ -58,7 +45,9 @@ new function() {
 
 // << ------------------------------------------------------------------------ >> //
 
+EasySAXParser.entityDecode = xmlEntityDecode;
 module.exports = EasySAXParser;
+
 
 var stringFromCharCode = String.fromCharCode;
 var xharsQuot = {constructor: false
@@ -105,7 +94,7 @@ function replaceEntities(s, d, x, z) {
     return stringFromCharCode(parseInt(x, 16));
 };
 
-function unEntities(s) {
+function xmlEntityDecode(s) {
     var s = ('' + s);
 
     if (s.length > 3 && s.indexOf('&') !== -1) {
@@ -139,13 +128,21 @@ function EasySAXParser() {
     var is_onComment = false, is_onQuestion = false, is_onAttention = false, is_onUnknownNS = false;
 
     var default_xmlns;
+    var isEntityDecode = true; // делать "EntityDecode" всегда
+    var entityDecode = xmlEntityDecode;
     var hasSurmiseNS = false;
     var isNamespace = false;
     var returnError = null;
     var parseStop = false; // прервать парсер
-    var nsmatrix = {xmlns: xmlns};
+    var nsmatrix = null;
     var useNS;
     var xmlns;
+
+
+    this.setEntityDecode = function(fn) {
+        isEntityDecode = typeof fn === 'function';
+        entityDecode = isEntityDecode ? fn : xmlEntityDecode;
+    };
 
     this.on = function(name, cb) {
         if (typeof cb !== 'function') {
@@ -321,6 +318,10 @@ function EasySAXParser() {
             value = s.substring(i, j);
             i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
 
+            if (isEntityDecode) {
+                value = entityDecode(value);
+            };
+
             if (!isNamespace) { //
                 res[name] = value;
                 continue;
@@ -334,7 +335,7 @@ function EasySAXParser() {
                 );
 
                 if (newalias !== null) {
-                    alias = useNS[unEntities(value)];
+                    alias = useNS[entityDecode(value)];
                     if (is_onUnknownNS && !alias) {
                         alias = onUnknownNS(value);
                     };
@@ -408,20 +409,20 @@ function EasySAXParser() {
 
     // xml - string
     function parse(xml) {
-        var u
-        , xml = ('' + xml)
-        , stacknsmatrix = []
-        , nodestack = []
-        , tagstart = false
-        , tagend = false
-        , j = 0, i = 0
-        , x, y, q, w
-        , stopIndex = 0
-        , _nsmatrix
-        , xmlns
-        , elem
-        , stop // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
-        ;
+        var stacknsmatrix = [];
+        var nodestack = [];
+        var stopIndex = 0;
+        var _nsmatrix;
+        var isTagStart = false;
+        var isTagEnd = false;
+        var x, y, q, w;
+        var j = 0;
+        var i = 0;
+        var xmlns;
+        var elem;
+        var stop; // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
+        var xml = ('' + xml);
+
 
         function getStringNode() {
             return xml.substring(i, j + 1)
@@ -446,7 +447,7 @@ function EasySAXParser() {
             };
 
             if (j !== i && !stop) {
-                onTextNode(xml.substring(j, i), unEntities);
+                onTextNode(isEntityDecode ? entityDecode(xml.substring(j, i)) : xml.substring(j, i));
                 if (parseStop) {
                     return;
                 };
@@ -464,7 +465,7 @@ function EasySAXParser() {
                     };
 
                     if (!stop) {
-                        onCDATA(xml.substring(i + 9, j), false);
+                        onCDATA(xml.substring(i + 9, j));
                         if (parseStop) {
                             return;
                         };
@@ -484,7 +485,7 @@ function EasySAXParser() {
 
 
                     if (is_onComment && !stop) {
-                        onComment(xml.substring(i + 4, j), unEntities);
+                        onComment(isEntityDecode ? entityDecode(xml.substring(i + 4, j)) : xml.substring(i + 4, j));
                         if (parseStop) {
                             return;
                         };
@@ -501,7 +502,7 @@ function EasySAXParser() {
                 };
 
                 if (is_onAttention && !stop) {
-                    onAttention(xml.substring(i, j + 1), unEntities);
+                    onAttention(xml.substring(i, j + 1));
                     if (parseStop) {
                         return;
                     };
@@ -540,8 +541,8 @@ function EasySAXParser() {
 
             //if (xml.charCodeAt(i+1) === 47) { // </...
             if (w === 47) { // </...
-                tagstart = false;
-                tagend = true;
+                isTagStart = false;
+                isTagEnd = true;
 
                 // проверяем что должен быть закрыт тотже тег что и открывался
                 x = elem = nodestack.pop();
@@ -568,14 +569,14 @@ function EasySAXParser() {
                 if (xml.charCodeAt(j - 1) ===  47) { // .../>
                     x = elem = xml.substring(i + 1, j - 1);
 
-                    tagstart = true;
-                    tagend = true;
+                    isTagStart = true;
+                    isTagEnd = true;
 
                 } else {
                     x = elem = xml.substring(i + 1, j);
 
-                    tagstart = true;
-                    tagend = false;
+                    isTagStart = true;
+                    isTagEnd = false;
                 };
 
                 if (!(w > 96  && w < 123 || w > 64 && w < 91 || w === 95 || w === 58)) { // char 95"_" 58":"
@@ -600,16 +601,16 @@ function EasySAXParser() {
                     return;
                 };
 
-                if (!tagend) {
+                if (!isTagEnd) {
                     nodestack.push(elem);
                 };
             };
 
 
             if (isNamespace) {
-                if (stop) {
-                    if (tagend) {
-                        if (!tagstart) {
+                if (stop) { // потомки неизвестного пространства имен
+                    if (isTagEnd) {
+                        if (!isTagStart) {
                             if (--stopIndex === 0) {
                                 nsmatrix = stacknsmatrix.pop();
                             };
@@ -623,21 +624,20 @@ function EasySAXParser() {
                     continue;
                 };
 
+                // добавляем в stacknsmatrix только если !isTagEnd, иначе сохраняем контекст пространств в переменной
                 _nsmatrix = nsmatrix;
-                if (!tagend) {
+                if (!isTagEnd) {
                     stacknsmatrix.push(nsmatrix);
                 };
 
-                if (tagstart) {
-                    if (attr_res !== true) {
-                        if (hasSurmiseNS = x.indexOf('xmlns', q) !== -1) { // есть подозрение на xmlns
-                            attr_posstart = q;
-                            attr_string = x;
+                if (isTagStart && (attr_res === null)) {
+                    if (hasSurmiseNS = x.indexOf('xmlns', q) !== -1) { // есть подозрение на xmlns
+                        attr_posstart = q;
+                        attr_string = x;
 
-                            getAttrs();
+                        getAttrs();
 
-                            hasSurmiseNS = false;
-                        };
+                        hasSurmiseNS = false;
                     };
                 };
 
@@ -652,16 +652,11 @@ function EasySAXParser() {
 
 
                 if (!xmlns) {
-                    if (tagend) {
-                        if (tagstart) {
-                            nsmatrix = _nsmatrix;
-                        } else {
-                            nsmatrix = stacknsmatrix.pop();
-                        };
-
+                    // элемент неизвестного пространства имен
+                    if (isTagEnd) {
+                        nsmatrix = _nsmatrix; // так как тут всегда isTagStart
                     } else {
                         stopIndex = 1; // первый элемент для которого не определено пространство имен
-                        attr_res = true;
                     };
 
                     j += 1;
@@ -671,26 +666,24 @@ function EasySAXParser() {
                 elem = xmlns + ':' + elem;
             };
 
-            if (tagstart) {
+            if (isTagStart) {
                 attr_posstart = q;
                 attr_string = x;
 
-                onStartNode(elem, getAttrs, unEntities, tagend, getStringNode);
+                onStartNode(elem, getAttrs, isTagEnd, getStringNode);
                 if (parseStop) {
                     return;
                 };
-
-                attr_res = true;
             };
 
-            if (tagend) {
-                onEndNode(elem, unEntities, tagstart, getStringNode);
+            if (isTagEnd) {
+                onEndNode(elem, isTagStart, getStringNode);
                 if (parseStop) {
                     return;
                 };
 
                 if (isNamespace) {
-                    if (tagstart) {
+                    if (isTagStart) {
                         nsmatrix = _nsmatrix;
                     } else {
                         nsmatrix = stacknsmatrix.pop();

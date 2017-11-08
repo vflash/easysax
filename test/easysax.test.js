@@ -27,7 +27,8 @@ module.exports = function(op) {
 function test(options) {
     var parser = options.parser;
     var error = false;
-    var list = options.to;
+    var indexTest = -1;
+    var list = [].concat(options.to);
 
     if (!parser) {
         parser = new easysax();
@@ -40,7 +41,7 @@ function test(options) {
     };
 
     function test(name) {
-        var values = list.shift();
+        var values = list[++indexTest];
         var args = arguments;
 
         if (error) {
@@ -48,7 +49,11 @@ function test(options) {
         };
 
         if (!values) {
-            error = name + ': не полный тест';
+            if (name === 'startNode' || name === 'endNode') {
+                error = name + ' ' + args[1] + ' - не полный тест';
+            } else {
+                error = name + ' - не полный тест';
+            };
             return;
         };
 
@@ -59,14 +64,14 @@ function test(options) {
                 var attrs = args[index];
                 if (!value || value === true) {
                     if (attrs !== value) {
-                        error = name + ':' + index + '  attr: ' + value + ' !== ' + attrs;
+                        error = '#' + indexTest + ' событие ' + name + ':' + index + '  attr: ' + attrs + ' !== ' + value;
                         break;
                     };
                 };
 
                 for (var j in value) {
                     if (value[j] !== attrs[j]) {
-                        error = name + ':' + index + '  ' + j + ': ' + value[j] + ' !== ' + attrs[j];
+                        error = '#' + indexTest + ' событие ' + name + ':' + index + ', атрибут  ' + j + ', значение ' + attrs[j] + ' !== ' + value[j];
                         break;
                     };
                 };
@@ -79,12 +84,10 @@ function test(options) {
             };
 
             if (args[index] !== value) {
-                error = name + ':' + index + '  ' + args[index] + ' !== ' + value;
+                error = '#' + indexTest + ' событие ' + name + ':' + index + ', значение ' + args[index] + ' !== ' + value;
                 break;
             };
         };
-
-        return error;
     };
 
 
@@ -92,15 +95,15 @@ function test(options) {
         test('error');
     });
 
-    parser.on('startNode', function(elem, attr, uq, tagend, getStrNode) {
+    parser.on('startNode', function(elem, attr, tagend, getStrNode) {
         test('startNode', elem, attr(), tagend, getStrNode);
     });
 
-    parser.on('endNode', function(elem, uq, tagstart, str) {
+    parser.on('endNode', function(elem, tagstart, str) {
         test('endNode', elem, tagstart, str);
     });
 
-    parser.on('textNode', function(s, uq) {
+    parser.on('textNode', function(s) {
         test('textNode', s);
     });
 
