@@ -196,6 +196,19 @@ test({
 });
 
 test({
+    xml: '<feed xmlns="http://www.w3.org/2005/Atom"><aa xmlns="http://search.yahoo.com/mrss/"><bb/></aa></feed>',
+    ns: 'atom',
+    to: [
+        ['startNode', 'atom:feed'],
+        ['startNode', 'media:aa'],
+        ['startNode', 'media:bb'],
+        ['endNode', 'media:bb'],
+        ['endNode', 'media:aa'],
+        ['endNode', 'atom:feed'],
+    ],
+});
+
+test({
     xml: '<feed xmlns="http://www.w3.org/2005/Atom" xmlns:m="http://search.yahoo.com/mrss/"><m:title>text</m:title></feed>',
     ns: 'atom',
     to: [

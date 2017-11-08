@@ -624,10 +624,11 @@ function EasySAXParser() {
                 };
 
                 _nsmatrix = nsmatrix;
+                if (!tagend) {
+                    stacknsmatrix.push(nsmatrix);
+                };
 
                 if (tagstart) {
-                    stacknsmatrix.push(nsmatrix);
-
                     if (attr_res !== true) {
                         if (hasSurmiseNS = x.indexOf('xmlns', q) !== -1) { // есть подозрение на xmlns
                             attr_posstart = q;
