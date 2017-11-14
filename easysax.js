@@ -221,6 +221,8 @@ function EasySAXParser() {
     // -----------------------------------------------------
 
 
+    var stringNodePosStart = 0;
+    var stringNodePosEnd = 0;
     var attr_string = ''; // строка атрибутов
     var attr_posstart = 0; //
     var attr_res; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
@@ -405,6 +407,10 @@ function EasySAXParser() {
         return attr_res = res;
     };
 
+    function getStringNode() {
+        return xml.substring(stringNodePosStart, stringNodePosEnd + 1);
+    };
+
 
     // xml - string
     function parse(xml) {
@@ -422,10 +428,6 @@ function EasySAXParser() {
         , elem
         , stop // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
         ;
-
-        function getStringNode() {
-            return xml.substring(i, j + 1)
-        };
 
         while(j !== -1) {
             stop = stopIndex > 0;
@@ -670,6 +672,9 @@ function EasySAXParser() {
 
                 elem = xmlns + ':' + elem;
             };
+
+            stringNodePosStart = i;
+            stringNodePosEnd = j;
 
             if (tagstart) {
                 attr_posstart = q;
