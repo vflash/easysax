@@ -39,6 +39,13 @@ test({
 });
 
 test({
+    xml: '</a>',
+    to: [
+        ['error'],
+    ],
+});
+
+test({
     xml: '<_a><:b></:b></_a>',
     to: [
         ['startNode', '_a', true, false],
