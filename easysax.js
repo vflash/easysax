@@ -550,11 +550,16 @@ function EasySAXParser() {
                 isTagEnd = true;
 
                 // проверяем что должен быть закрыт тотже тег что и открывался
+                if (!nodestack.length) {
+                    onError(returnError = 'close tag, requires open tag');
+                    return;
+                };
+
                 x = elem = nodestack.pop();
                 q = i + 2 + x.length;
 
                 if (xml.substring(i + 2, q) !== x) {
-                    onError(returnError = 'close tagname');
+                    onError(returnError = 'close tag, not equal to the open tag');
                     return;
                 };
 
