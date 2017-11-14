@@ -1,3 +1,5 @@
+'use strict';
+
 /*
 new function() {
     var parser = new EasySAXParser();
@@ -50,41 +52,40 @@ module.exports = EasySAXParser;
 
 
 var stringFromCharCode = String.fromCharCode;
-var xharsQuot = {constructor: false
-    , propertyIsEnumerable: false
-    , toLocaleString: false
-    , hasOwnProperty: false
-    , isPrototypeOf: false
-    , toString: false
-    , valueOf: false
-
-    , quot: '"'
-    , QUOT: '"'
-    , amp: '&'
-    , AMP: '&'
-    , nbsp: '\u00A0'
-    , apos: '\''
-    , lt: '<'
-    , LT: '<'
-    , gt: '>'
-    , GT: '>'
-    , copy: '\u00A9'
-    , laquo: '\u00AB'
-    , raquo: '\u00BB'
-    , reg: '\u00AE'
-    , deg: '\u00B0'
-    , plusmn: '\u00B1'
-    , sup2: '\u00B2'
-    , sup3: '\u00B3'
-    , micro: '\u00B5'
-    , para: '\u00B6'
-};
-
+var objectCreate = Object.create;
 function NULL_FUNC() {};
+
+function entity2char(x) {
+    if (x === 'amp') {
+        return '&';
+    };
+
+    switch(x.toLocaleLowerCase()) {
+        case 'quot': return '"';
+        case 'amp': return '&'
+        case 'lt': return '<'
+        case 'gt': return '>'
+
+        case 'plusmn': return '\u00B1';
+        case 'laquo': return '\u00AB';
+        case 'raquo': return '\u00BB';
+        case 'micro': return '\u00B5';
+        case 'nbsp': return '\u00A0';
+        case 'copy': return '\u00A9';
+        case 'sup2': return '\u00B2';
+        case 'sup3': return '\u00B3';
+        case 'para': return '\u00B6';
+        case 'reg': return '\u00AE';
+        case 'deg': return '\u00B0';
+        case 'apos': return '\'';
+    };
+
+    return '&' + x + ';';
+};
 
 function replaceEntities(s, d, x, z) {
     if (z) {
-        return xharsQuot[z] || '\x01';
+        return entity2char(z);
     };
 
     if (d) {
@@ -98,9 +99,9 @@ function xmlEntityDecode(s) {
     var s = ('' + s);
 
     if (s.length > 3 && s.indexOf('&') !== -1) {
-        if (s.indexOf('&quot;') !== -1) s = s.replace(/&quot;/g, '"');
-        if (s.indexOf('&gt;') !== -1) s = s.replace(/&gt;/g, '>');
-        if (s.indexOf('&lt;') !== -1) s = s.replace(/&lt;/g, '<');
+        if (s.indexOf('&lt;') !== -1) {s = s.replace(/&lt;/g, '<');}
+        if (s.indexOf('&gt;') !== -1) {s = s.replace(/&gt;/g, '>');}
+        if (s.indexOf('&quot;') !== -1) {s = s.replace(/&quot;/g, '"');}
 
         if (s.indexOf('&') !== -1) {
             s = s.replace(/&#(\d+);|&#x([0123456789abcdef]+);|&(\w+);/ig, replaceEntities);
@@ -111,7 +112,7 @@ function xmlEntityDecode(s) {
 };
 
 function cloneMatrixNS(nsmatrix) {
-    var nn = {};
+    var nn = objectCreate(null);
     for (var n in nsmatrix) {
         nn[n] = nsmatrix[n];
     };
@@ -195,11 +196,12 @@ function EasySAXParser() {
         returnError = null;
 
         if (isNamespace) {
-            nsmatrix = {xmlns: default_xmlns};
+            nsmatrix = objectCreate(null);
+            nsmatrix.xmlns = default_xmlns;
 
             parse(xml);
 
-            nsmatrix = false;
+            nsmatrix = null;
 
         } else {
             parse(xml);
@@ -218,6 +220,8 @@ function EasySAXParser() {
     // -----------------------------------------------------
 
 
+    var stringNodePosStart = 0;
+    var stringNodePosEnd = 0;
     var attr_string = ''; // строка атрибутов
     var attr_posstart = 0; //
     var attr_res; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
@@ -235,23 +239,21 @@ function EasySAXParser() {
             return attr_res;
         };
 
-        var u
-        , xmlnsAlias
-        , nsAttrName
-        , attrList = isNamespace && hasSurmiseNS ? [] : null
-        , i = attr_posstart
-        , s = attr_string
-        , l = s.length
-        , hasNewMatrix
-        , newalias
-        , value
-        , alias
-        , name
-        , res = {}
-        , ok
-        , w
-        , j
-        ;
+        var xmlnsAlias;
+        var nsAttrName;
+        var attrList = isNamespace && hasSurmiseNS ? [] : null;
+        var i = attr_posstart;
+        var s = attr_string;
+        var l = s.length;
+        var hasNewMatrix;
+        var newalias;
+        var value;
+        var alias;
+        var name;
+        var res = {};
+        var ok;
+        var w;
+        var j;
 
 
         for(; i < l; i++) {
@@ -406,6 +408,9 @@ function EasySAXParser() {
         return attr_res = res;
     };
 
+    function getStringNode() {
+        return xml.substring(stringNodePosStart, stringNodePosEnd + 1);
+    };
 
     // xml - string
     function parse(xml) {
@@ -424,9 +429,9 @@ function EasySAXParser() {
         var xml = ('' + xml);
 
 
-        function getStringNode() {
-            return xml.substring(i, j + 1)
-        };
+        // function getStringNode() {
+        //     return xml.substring(i, j + 1)
+        // };
 
         while(j !== -1) {
             stop = stopIndex > 0;
@@ -665,6 +670,9 @@ function EasySAXParser() {
 
                 elem = xmlns + ':' + elem;
             };
+
+            stringNodePosStart = i;
+            stringNodePosEnd = j;
 
             if (isTagStart) {
                 attr_posstart = q;
