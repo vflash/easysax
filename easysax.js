@@ -146,6 +146,7 @@ function EasySAXParser() {
     var nsmatrix = {xmlns: xmlns};
     var useNS;
     var xmlns;
+    var xml = ''; // string
 
     this.on = function(name, cb) {
         if (typeof cb !== 'function') {
@@ -190,26 +191,28 @@ function EasySAXParser() {
         return this;
     };
 
-    this.parse = function(xml) {
-        if (typeof xml !== 'string') {
+    this.parse = function(_xml) {
+        if (typeof _xml !== 'string') {
             return;
         };
 
         returnError = null;
+        xml = _xml;
 
         if (isNamespace) {
             nsmatrix = {xmlns: default_xmlns};
 
-            parse(xml);
+            parse();
 
             nsmatrix = false;
 
         } else {
-            parse(xml);
+            parse();
         };
 
         parseStop = false;
         attr_res = true;
+        xml = '';
 
         return returnError;
     };
@@ -412,10 +415,8 @@ function EasySAXParser() {
     };
 
 
-    // xml - string
-    function parse(xml) {
+    function parse() {
         var u
-        , xml = ('' + xml)
         , stacknsmatrix = []
         , nodestack = []
         , tagstart = false
