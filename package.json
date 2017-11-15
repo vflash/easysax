@@ -10,7 +10,7 @@
 		"parser",
 		"pure"
 	],
-	"version": "0.3.1",
+	"version": "0.3.2",
 	"main": "./easysax.js",
 	"bugs": {
 		"url": "https://github.com/vflash/easysax/issues"
