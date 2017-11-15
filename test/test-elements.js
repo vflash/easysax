@@ -73,6 +73,14 @@ test({
 });
 
 test({
+    xml: '<root/>',
+    to: [
+        ['startNode', 'root', true, true],
+        ['endNode', 'root', true],
+    ],
+});
+
+test({
     xml: '<root/><f',
     to: [
         ['startNode', 'root', true, true],
@@ -87,6 +95,14 @@ test({
         ['startNode', 'root'],
         ['textNode', 'text'],
         ['endNode', 'root'],
+    ],
+});
+
+test({
+    xml: '<root></root>',
+    to: [
+        ['startNode', 'root', true, false, '<root>'],
+        ['endNode', 'root', false, '</root>'],
     ],
 });
 

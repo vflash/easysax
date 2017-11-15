@@ -83,6 +83,14 @@ function test(options) {
                 continue;
             };
 
+            if ((name === 'startNode' && index === 4) || (name === 'endNode' && index === 3)) {
+                var arg = args[index]();
+                if (arg !== value) {
+                    error = name + ':' + index + '  getStringNode ' + arg + ' !== ' + value;
+                };
+                break;
+            };
+
             if (args[index] !== value) {
                 error = '#' + indexTest + ' событие ' + name + ':' + index + ', значение ' + args[index] + ' !== ' + value;
                 break;

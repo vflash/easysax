@@ -138,6 +138,7 @@ function EasySAXParser() {
     var nsmatrix = null;
     var useNS;
     var xmlns;
+    var xml = ''; // string
 
 
     this.setEntityDecode = function(fn) {
@@ -188,27 +189,29 @@ function EasySAXParser() {
         return this;
     };
 
-    this.parse = function(xml) {
-        if (typeof xml !== 'string') {
+    this.parse = function(_xml) {
+        if (typeof _xml !== 'string') {
             return;
         };
 
         returnError = null;
+        xml = _xml;
 
         if (isNamespace) {
             nsmatrix = objectCreate(null);
             nsmatrix.xmlns = default_xmlns;
 
-            parse(xml);
+            parse();
 
             nsmatrix = null;
 
         } else {
-            parse(xml);
+            parse();
         };
 
         parseStop = false;
         attr_res = true;
+        xml = '';
 
         return returnError;
     };
@@ -412,8 +415,8 @@ function EasySAXParser() {
         return xml.substring(stringNodePosStart, stringNodePosEnd + 1);
     };
 
-    // xml - string
-    function parse(xml) {
+
+    function parse() {
         var stacknsmatrix = [];
         var nodestack = [];
         var stopIndex = 0;
@@ -426,12 +429,7 @@ function EasySAXParser() {
         var xmlns;
         var elem;
         var stop; // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
-        var xml = ('' + xml);
 
-
-        // function getStringNode() {
-        //     return xml.substring(i, j + 1)
-        // };
 
         while(j !== -1) {
             stop = stopIndex > 0;
