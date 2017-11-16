@@ -128,27 +128,41 @@ function EasySAXParser() {
     var onTextNode = NULL_FUNC, onStartNode = NULL_FUNC, onEndNode = NULL_FUNC, onCDATA = NULL_FUNC, onError = NULL_FUNC, onComment, onQuestion, onAttention, onUnknownNS;
     var is_onComment = false, is_onQuestion = false, is_onAttention = false, is_onUnknownNS = false;
 
-    var default_xmlns;
-    var isEntityDecode = true; // делать "EntityDecode" всегда
+    var isAutoEntity = true; // делать "EntityDecode" всегда
     var entityDecode = xmlEntityDecode;
     var hasSurmiseNS = false;
     var isNamespace = false;
     var returnError = null;
     var parseStop = false; // прервать парсер
+    var defaultNS;
     var nsmatrix = null;
     var useNS;
     var xmlns;
     var xml = ''; // string
 
 
-    this.setEntityDecode = function(fn) {
-        isEntityDecode = typeof fn === 'function';
-        entityDecode = isEntityDecode ? fn : xmlEntityDecode;
+    this.setup = function (op) {
+        for (var name in op) {
+            switch(name) {
+                case 'entityDecode': entityDecode = op.entityDecode || entityDecode; break;
+                case 'autoEntity': isAutoEntity = !!op.autoEntity; break;
+                case 'defaultNS': defaultNS = op.defaultNS || null; break;
+                case 'ns': isNamespace = !!(useNS = op.ns || null); break;
+                case 'on':
+                    var listeners = op.on;
+                    for (var ev in listeners) {
+                        this.on(ev, listeners[ev]);
+                    };
+                break;
+            };
+        };
     };
 
     this.on = function(name, cb) {
         if (typeof cb !== 'function') {
-            if (cb !== null) return;
+            if (cb !== null) {
+                throw error('required args on(string, function||null)');
+            };
         };
 
         switch(name) {
@@ -166,32 +180,26 @@ function EasySAXParser() {
     };
 
     this.ns = function(root, ns) {
-        if (!root || typeof root !== 'string' || !ns) {
+        if (!root) {
+            isNamespace = false;
+            defaultNS = null;
+            useNS = null;
             return this;
         };
 
-        var x = {}, ok, v, i;
-
-        for(i in ns) {
-            v = ns[i];
-            if (typeof v === 'string') {
-                if (root === v) ok = true;
-                x[i] = v;
-            };
+        if (!ns || typeof root !== 'string') {
+            throw error('required args ns(string, object)');
         };
 
-        if (ok) {
-            default_xmlns = root;
-            isNamespace = true;
-            useNS = x;
-        };
+        isNamespace = !!(useNS = ns || null);
+        defaultNS = root || null;
 
         return this;
     };
 
     this.parse = function(_xml) {
         if (typeof _xml !== 'string') {
-            return;
+            return 'required args parser(string)'; // error
         };
 
         returnError = null;
@@ -199,7 +207,7 @@ function EasySAXParser() {
 
         if (isNamespace) {
             nsmatrix = objectCreate(null);
-            nsmatrix.xmlns = default_xmlns;
+            nsmatrix.xmlns = defaultNS;
 
             parse();
 
@@ -323,7 +331,7 @@ function EasySAXParser() {
             value = s.substring(i, j);
             i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
 
-            if (isEntityDecode) {
+            if (isAutoEntity) {
                 value = entityDecode(value);
             };
 
@@ -450,7 +458,7 @@ function EasySAXParser() {
             };
 
             if (j !== i && !stop) {
-                onTextNode(isEntityDecode ? entityDecode(xml.substring(j, i)) : xml.substring(j, i));
+                onTextNode(isAutoEntity ? entityDecode(xml.substring(j, i)) : xml.substring(j, i));
                 if (parseStop) {
                     return;
                 };
@@ -488,7 +496,7 @@ function EasySAXParser() {
 
 
                     if (is_onComment && !stop) {
-                        onComment(isEntityDecode ? entityDecode(xml.substring(i + 4, j)) : xml.substring(i + 4, j));
+                        onComment(isAutoEntity ? entityDecode(xml.substring(i + 4, j)) : xml.substring(i + 4, j));
                         if (parseStop) {
                             return;
                         };
