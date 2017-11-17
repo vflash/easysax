@@ -120,7 +120,7 @@ function cloneMatrixNS(nsmatrix) {
 };
 
 
-function EasySAXParser() {
+function EasySAXParser(config) {
     if (!this) {
         return null;
     };
@@ -137,7 +137,6 @@ function EasySAXParser() {
     var defaultNS;
     var nsmatrix = null;
     var useNS;
-    var xmlns;
     var xml = ''; // string
 
 
@@ -218,7 +217,7 @@ function EasySAXParser() {
         };
 
         parseStop = false;
-        attr_res = true;
+        attrRes = true;
         xml = '';
 
         return returnError;
@@ -228,14 +227,18 @@ function EasySAXParser() {
         parseStop = true;
     };
 
+    if (config) {
+        this.setup(config);
+    };
+
     // -----------------------------------------------------
 
 
-    var stringNodePosStart = 0;
-    var stringNodePosEnd = 0;
-    var attr_string = ''; // строка атрибутов
-    var attr_posstart = 0; //
-    var attr_res; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
+    var stringNodePosStart; // number
+    var stringNodePosEnd; // number
+    var attrStartPos; // number начало позиции атрибутов в строке attrString <(div^ class="xxxx" title="sssss")/>
+    var attrString; // строка атрибутов <(div class="xxxx" title="sssss")/>
+    var attrRes; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
 
     /*
         парсит атрибуты по требованию. Важно! - функция не генерирует исключения.
@@ -246,15 +249,15 @@ function EasySAXParser() {
     */
 
     function getAttrs() {
-        if (attr_res !== null) {
-            return attr_res;
+        if (attrRes !== null) {
+            return attrRes;
         };
 
         var xmlnsAlias;
         var nsAttrName;
         var attrList = isNamespace && hasSurmiseNS ? [] : null;
-        var i = attr_posstart;
-        var s = attr_string;
+        var i = attrStartPos + 1; // так как первый символ уже был проверен
+        var s = attrString;
         var l = s.length;
         var hasNewMatrix;
         var newalias;
@@ -274,9 +277,9 @@ function EasySAXParser() {
                 continue
             };
 
-            if (w < 65 || w > 122 || (w > 90 && w < 97) ) { // ожидаем символ
+            if (w < 65 || w > 122 || (w > 90 && w < 97) ) { // недопустимые первые символы
                 if (w !== 95 && w !== 58) { // char 95"_" 58":"
-                    return attr_res = false; // error. invalid first char
+                    return attrRes = false; // error. invalid first char
                 };
             };
 
@@ -288,7 +291,7 @@ function EasySAXParser() {
                 };
 
                 if (w !== 61) { // "=" == 61
-                    return attr_res = false; // error. invalid char "="
+                    return attrRes = false; // error. invalid char "="
                 };
 
                 break;
@@ -298,7 +301,7 @@ function EasySAXParser() {
             ok = true;
 
             if (name === 'xmlns:xmlns') {
-                return attr_res = false; // error. invalid name
+                return attrRes = false; // error. invalid name
             };
 
             w = s.charCodeAt(j + 1);
@@ -308,14 +311,14 @@ function EasySAXParser() {
 
             } else {
                 if (w !== 39) { // "'"
-                    return attr_res = false; // error. invalid char
+                    return attrRes = false; // error. invalid char
                 };
 
                 j = s.indexOf('\'', i = j + 2 );
             };
 
             if (j === -1) {
-                return attr_res = false; // error. invalid char
+                return attrRes = false; // error. invalid char
             };
 
             if (j + 1 < l) {
@@ -323,7 +326,7 @@ function EasySAXParser() {
 
                 if (w > 32 || w < 9 || (w < 32 && w > 13)) {
                     // error. invalid char
-                    return attr_res = false;
+                    return attrRes = false;
                 };
             };
 
@@ -395,7 +398,7 @@ function EasySAXParser() {
 
 
         if (!ok) {
-            return attr_res = true;  // атрибутов нет, ошибок тоже нет
+            return attrRes = true;  // атрибутов нет, ошибок тоже нет
         };
 
         if (hasSurmiseNS)  {
@@ -416,7 +419,7 @@ function EasySAXParser() {
             };
         };
 
-        return attr_res = res;
+        return attrRes = res;
     };
 
     function getStringNode() {
@@ -450,7 +453,12 @@ function EasySAXParser() {
 
             if (i === -1) { // конец разбора
                 if (nodestack.length) {
-                    onError(returnError = 'end file');
+                    onError(returnError = 'unexpected end parse');
+                    return;
+                };
+
+                if (j === 0) {
+                    onError(returnError = 'missing first tag');
                     return;
                 };
 
@@ -544,11 +552,11 @@ function EasySAXParser() {
             j = xml.indexOf('>', i + 1);
 
             if (j == -1) { // error
-                onError(returnError = '...>');
+                onError(returnError = 'unclosed tag'); // ...>
                 return;
             };
 
-            attr_res = true; // атрибутов нет
+            attrRes = true; // атрибутов нет
 
             //if (xml.charCodeAt(i+1) === 47) { // </...
             if (w === 47) { // </...
@@ -562,9 +570,9 @@ function EasySAXParser() {
                 };
 
                 x = elem = nodestack.pop();
-                q = i + 2 + x.length;
+                q = i + 2 + elem.length;
 
-                if (xml.substring(i + 2, q) !== x) {
+                if (elem !== xml.substring(i + 2, q)) {
                     onError(returnError = 'close tag, not equal to the open tag');
                     return;
                 };
@@ -608,8 +616,8 @@ function EasySAXParser() {
                     };
 
                     if (w === 32 || (w < 14 && w > 8)) { // \f\n\r\t\v пробел
+                        attrRes = null; // возможно есть атирибуты
                         elem = x.substring(0, q)
-                        attr_res = null; // возможно есть атирибуты
                         break;
                     };
 
@@ -646,10 +654,10 @@ function EasySAXParser() {
                     stacknsmatrix.push(nsmatrix);
                 };
 
-                if (isTagStart && (attr_res === null)) {
+                if (isTagStart && (attrRes === null)) {
                     if (hasSurmiseNS = x.indexOf('xmlns', q) !== -1) { // есть подозрение на xmlns
-                        attr_posstart = q;
-                        attr_string = x;
+                        attrStartPos = q;
+                        attrString = x;
 
                         getAttrs();
 
@@ -686,8 +694,8 @@ function EasySAXParser() {
             stringNodePosEnd = j;
 
             if (isTagStart) {
-                attr_posstart = q;
-                attr_string = x;
+                attrStartPos = q;
+                attrString = x;
 
                 onStartNode(elem, getAttrs, isTagEnd, getStringNode);
                 if (parseStop) {
