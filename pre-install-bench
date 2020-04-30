@@ -1,0 +1,6 @@
+#!/bin/bash
+
+npm i --no-save ltx
+npm i --no-save sax
+npm i --no-save libxmljs
+npm i --no-save node-expat
