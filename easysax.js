@@ -14,11 +14,11 @@ new function() {
     parser.on('error', function(msgError) {
     });
 
-    parser.on('startNode', function(elemName, getAttr, isTagEnd, getStrNode) {
+    parser.on('startNode', function(nodeName, getAttr, isTagEnd, getStrNode) {
         var attr = getAttr();
     });
 
-    parser.on('endNode', function(elemName, isTagStart, getStrNode) {
+    parser.on('endNode', function(nodeName, isTagStart, getStrNode) {
     });
 
     parser.on('textNode', function(text) {
@@ -36,11 +36,11 @@ new function() {
     //parser.on('question', function() {}); // <? ... ?>
     //parser.on('attention', function() {}); // <!XXXXX zzzz="eeee">
 
-    console.time('easysax');
-    for(var z=1000;z--;) {
-        parser.parse(xml)
-    };
-    console.timeEnd('easysax');
+
+    parser.write(stringChunk);
+    parser.write(stringChunk);
+    ...
+    parser.end(stringChunk);
 };
 
 */
@@ -129,16 +129,37 @@ function EasySAXParser(config) {
     var is_onComment = false, is_onQuestion = false, is_onAttention = false, is_onUnknownNS = false;
 
     var isAutoEntity = true; // делать "EntityDecode" всегда
+    var indexStartXML; // позиция на которой закончен разбор xml
     var entityDecode = xmlEntityDecode;
-    var hasSurmiseNS = false;
+    var hasSurmiseNS;
     var isNamespace = false;
-    var returnError = null;
-    var parseStop = false; // прервать парсер
+    var returnError;
+    var isParseStop; // прервать парсер
     var defaultNS;
     var nsmatrix = null;
     var useNS;
-    var xml = ''; // string
+    var init = false;
+    var xml; // string
 
+    var stringNodePosStart; // number. для получения исходной строки узла
+    var stringNodePosEnd; // number. для получения исходной строки узла
+    var attrStartPos; // number начало позиции атрибутов в строке attrString <(div^ class="xxxx" title="sssss")/>
+    var attrString; // строка атрибутов <(div class="xxxx" title="sssss")/>
+    var attrRes; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
+
+    function reset() {
+        if (isNamespace) {
+            nsmatrix = objectCreate(null);
+            nsmatrix.xmlns = defaultNS;
+        };
+
+        indexStartXML = 0;
+        hasSurmiseNS = false;
+        returnError = '';
+        isParseStop = false;
+        attrRes = true;
+        xml = '';
+    };
 
     this.setup = function (op) {
         for (var name in op) {
@@ -146,7 +167,7 @@ function EasySAXParser(config) {
                 case 'entityDecode': entityDecode = op.entityDecode || entityDecode; break;
                 case 'autoEntity': isAutoEntity = !!op.autoEntity; break;
                 case 'defaultNS': defaultNS = op.defaultNS || null; break;
-                case 'ns': isNamespace = !!(useNS = op.ns || null); break;
+                case 'ns': useNS = op.ns || null; break;
                 case 'on':
                     var listeners = op.on;
                     for (var ev in listeners) {
@@ -155,19 +176,21 @@ function EasySAXParser(config) {
                 break;
             };
         };
+
+        isNamespace = !!defaultNS && !!useNS;
     };
 
     this.on = function(name, cb) {
-        if (typeof cb !== 'function') {
-            if (cb !== null) {
-                throw error('required args on(string, function||null)');
-            };
-        };
+        // if (typeof cb !== 'function') {
+        //     if (cb !== null) {
+        //         throw error('required args on(string, function||null)');
+        //     };
+        // };
 
         switch(name) {
             case 'startNode': onStartNode = cb || NULL_FUNC; break;
-            case 'textNode': onTextNode = cb || NULL_FUNC; break;
             case 'endNode': onEndNode = cb || NULL_FUNC; break;
+            case 'text': case 'textNode': onTextNode = cb || NULL_FUNC; break;
             case 'error': onError = cb || NULL_FUNC; break;
             case 'cdata': onCDATA = cb || NULL_FUNC; break;
 
@@ -196,35 +219,44 @@ function EasySAXParser(config) {
         return this;
     };
 
-    this.parse = function(_xml) {
-        if (typeof _xml !== 'string') {
-            return 'required args parser(string)'; // error
+    this.write = function(chunk) {
+        if (typeof chunk !== 'string') {
+            return;
         };
 
-        returnError = null;
-        xml = _xml;
-
-        if (isNamespace) {
-            nsmatrix = objectCreate(null);
-            nsmatrix.xmlns = defaultNS;
-
-            parse();
-
-            nsmatrix = null;
-
-        } else {
-            parse();
+        if (!init) {
+            init = true;
+            reset();
         };
 
-        parseStop = false;
-        attrRes = true;
+        xml = xml ? xml + chunk : chunk;
+        parse();
+
+        if (indexStartXML > 0) {
+            xml = xml.substring(indexStartXML);
+            indexStartXML = 0;
+        };
+
+        return this;
+    };
+
+    this.end = function() {
+        if (returnError) {
+            onError(returnError);
+        };
+
+        attrString = '';
+        init = false;
         xml = '';
+    };
 
-        return returnError;
+    this.parse = function(xml) {
+        this.write(xml);
+        this.end();
     };
 
     this.stop = function() {
-        parseStop = true;
+        isParseStop = true;
     };
 
     if (config) {
@@ -234,11 +266,6 @@ function EasySAXParser(config) {
     // -----------------------------------------------------
 
 
-    var stringNodePosStart; // number
-    var stringNodePosEnd; // number
-    var attrStartPos; // number начало позиции атрибутов в строке attrString <(div^ class="xxxx" title="sssss")/>
-    var attrString; // строка атрибутов <(div class="xxxx" title="sssss")/>
-    var attrRes; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
 
     /*
         парсит атрибуты по требованию. Важно! - функция не генерирует исключения.
@@ -266,6 +293,8 @@ function EasySAXParser(config) {
         var name;
         var res = {};
         var ok;
+        var iQ;
+        var iK;
         var w;
         var j;
 
@@ -300,6 +329,7 @@ function EasySAXParser(config) {
             name = s.substring(i, j);
             ok = true;
 
+
             if (name === 'xmlns:xmlns') {
                 return attrRes = false; // error. invalid name
             };
@@ -307,14 +337,14 @@ function EasySAXParser(config) {
             w = s.charCodeAt(j + 1);
 
             if (w === 34) {  // '"'
-                j = s.indexOf('"', i = j + 2 );
+                j = s.indexOf('"', i = j + 2);
 
             } else {
                 if (w !== 39) { // "'"
                     return attrRes = false; // error. invalid char
                 };
 
-                j = s.indexOf('\'', i = j + 2 );
+                j = s.indexOf('\'', i = j + 2);
             };
 
             if (j === -1) {
@@ -351,7 +381,7 @@ function EasySAXParser(config) {
                 );
 
                 if (newalias !== null) {
-                    alias = useNS[entityDecode(value)];
+                    alias = useNS[isAutoEntity ? value : entityDecode(value)];
                     if (is_onUnknownNS && !alias) {
                         alias = onUnknownNS(value);
                     };
@@ -384,15 +414,15 @@ function EasySAXParser(config) {
                 continue;
             };
 
-            w = name.indexOf(':');
-            if (w === -1) {
+            iQ = name.indexOf(':');
+            if (iQ === -1) {
                 res[name] = value;
                 continue;
             };
 
-            if (nsAttrName = nsmatrix[name.substring(0, w)]) {
-                nsAttrName = nsmatrix['xmlns'] === nsAttrName ? name.substr(w + 1) : nsAttrName + name.substr(w);
-                res[nsAttrName + name.substr(w)] = value;
+            if (nsAttrName = nsmatrix[name.substring(0, iQ)]) {
+                nsAttrName = nsmatrix['xmlns'] === nsAttrName ? name.substr(iQ + 1) : nsAttrName + name.substr(iQ);
+                res[nsAttrName + name.substr(iQ)] = value;
             };
         };
 
@@ -405,12 +435,12 @@ function EasySAXParser(config) {
             xmlnsAlias = nsmatrix['xmlns'];
 
             for (i = 0, l = attrList.length; i < l; i++) {
-                name = attrList[i++];
+                let name = attrList[i++];
 
-                w = name.indexOf(':');
-                if (w !== -1) {
-                    if (nsAttrName = nsmatrix[name.substring(0, w)]) {
-                        nsAttrName = xmlnsAlias === nsAttrName ? name.substr(w + 1) : nsAttrName + name.substr(w);
+                iK = name.indexOf(':');
+                if (iK !== -1) {
+                    if (nsAttrName = nsmatrix[name.substring(0, iK)]) {
+                        nsAttrName = xmlnsAlias === nsAttrName ? name.substr(iK + 1) : nsAttrName + name.substr(iK);
                         res[nsAttrName] = attrList[i];
                     };
                     continue;
@@ -422,253 +452,288 @@ function EasySAXParser(config) {
         return attrRes = res;
     };
 
-    function getStringNode() {
-        return xml.substring(stringNodePosStart, stringNodePosEnd + 1);
+    function getStringNode() { // вернет исходную строку узла
+        return xml.substring(stringNodePosStart, stringNodePosEnd);
     };
 
 
+    var parseStackMatrixNS = [];
+    var parseStackNodes = [];
+    var stopIndexNS = 0;
+
+
     function parse() {
-        var stacknsmatrix = [];
-        var nodestack = [];
-        var stopIndex = 0;
+        // разбор идет по элементам (тег, текст cdata, ...).
+        // элемент должен быть целиком в памяти
+
         var _nsmatrix;
         var isTagStart = false;
         var isTagEnd = false;
-        var x, y, q, w;
-        var j = 0;
-        var i = 0;
+        var nodeBody;
+        var stopEmit; // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
+        var nodeName;
         var xmlns;
-        var elem;
-        var stop; // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
+        var iD;
+        var iQ;
+        var w;
+        var i; // number
 
+        returnError = null; // сброс ошибки неудачного разбора
 
-        while(j !== -1) {
-            stop = stopIndex > 0;
+        while(indexStartXML !== -1) {
+            stopEmit = stopIndexNS > 0;
 
-            if (xml.charCodeAt(j) === 60) { // "<"
-                i = j;
+            // поиск начала тега
+            if (xml.charCodeAt(indexStartXML) === 60) { // "<"
+                i = indexStartXML;
             } else {
-                i = xml.indexOf('<', j);
+                i = xml.indexOf('<', indexStartXML);
             };
 
-            if (i === -1) { // конец разбора
-                if (nodestack.length) {
-                    onError(returnError = 'unexpected end parse');
+            if (i === -1) { // узел не найден. повторим попытку на след. write
+                if (parseStackNodes.length) {
+                    returnError = 'unexpected end parse';
                     return;
                 };
 
-                if (j === 0) {
-                    onError(returnError = 'missing first tag');
-                    return;
-                };
+                // --- нужно подумать как обрабатывать начало файла ---
+                // if (indexStartXML === 0) { // разбор еше не начат. возможно это начало файла. мусор до первого тега игнор
+                //     returnError = 'missing first tag';
+                //     return;
+                // };
 
                 return;
             };
 
-            if (j !== i && !stop) {
-                onTextNode(isAutoEntity ? entityDecode(xml.substring(j, i)) : xml.substring(j, i));
-                if (parseStop) {
+            if (indexStartXML !== i && !stopEmit) { // все что до тега это текст
+                let text = xml.substring(indexStartXML, i);
+                indexStartXML = i; // до этой позиции разбор завершен
+
+                onTextNode(isAutoEntity ? entityDecode(text) : text);
+                if (isParseStop) {
                     return;
                 };
             };
 
-            w = xml.charCodeAt(i+1);
+            // ELEMENT
+            // ---------------------------------------------
 
-            if (w === 33) { // "!"
-                w = xml.charCodeAt(i+2);
+            w = xml.charCodeAt(i + 1);
+
+            if (w === 33) { // 33 == "!"
+                let w = xml.charCodeAt(i + 2);
+
+                // CDATA
+                // ---------------------------------------------
                 if (w === 91 && xml.substr(i + 3, 6) === 'CDATA[') { // 91 == "["
-                    j = xml.indexOf(']]>', i);
-                    if (j === -1) {
-                        onError(returnError = 'cdata');
+                    let indexStartCDATA = i + 9;
+                    let indexEndCDATA = xml.indexOf(']]>', indexStartCDATA);
+                    if (indexEndCDATA === -1) {
+                        returnError = 'cdata, not found ...]]>'; // не закрыт CDATA. повторим попытку на след. write
                         return;
                     };
 
-                    if (!stop) {
-                        onCDATA(xml.substring(i + 9, j));
-                        if (parseStop) {
+                    indexStartXML = indexEndCDATA + 3;
+
+                    if (!stopEmit) {
+                        onCDATA(xml.substring(indexStartCDATA, indexEndCDATA));
+                        if (isParseStop) {
                             return;
                         };
                     };
-
-                    j += 3;
                     continue;
                 };
 
 
+                // COMMENT
+                // ---------------------------------------------
                 if (w === 45 && xml.charCodeAt(i + 3) === 45) { // 45 == "-"
-                    j = xml.indexOf('-->', i);
-                    if (j === -1) {
-                        onError(returnError = 'expected -->');
+                    let indexStartComment = i + 4;
+                    let indexEndComment = xml.indexOf('-->', indexStartComment);
+                    if (indexEndComment === -1) {
+                        returnError = 'expected -->'; // не закрыт комментарий. повторим попытку на след. write
                         return;
                     };
 
+                    indexStartXML = indexEndComment + 3;
 
-                    if (is_onComment && !stop) {
-                        onComment(isAutoEntity ? entityDecode(xml.substring(i + 4, j)) : xml.substring(i + 4, j));
-                        if (parseStop) {
+                    if (is_onComment && !stopEmit) {
+                        let commentText = xml.substring(indexStartComment, indexEndComment);
+                        onComment(isAutoEntity ? entityDecode(commentText) : commentText);
+                        if (isParseStop) {
                             return;
                         };
                     };
-
-                    j += 3;
                     continue;
                 };
 
-                j = xml.indexOf('>', i + 1);
-                if (j === -1) {
-                    onError(returnError = 'expected ">"');
-                    return;
-                };
-
-                if (is_onAttention && !stop) {
-                    onAttention(xml.substring(i, j + 1));
-                    if (parseStop) {
+                // ATTENTION
+                // ---------------------------------------------
+                {
+                    let indexStartAttention = i + 1;
+                    let indexEndAttention = xml.indexOf('>', indexStartAttention);
+                    if (indexEndAttention === -1) {
+                        returnError = 'expected attention ...>'; // повторим попытку на след. write
                         return;
+                    };
+
+                    indexStartXML = indexEndAttention + 1;
+
+                    if (is_onAttention && !stopEmit) {
+                        onAttention(xml.substring(i, indexStartXML)); // весь тег, так как не придумал api
+                        if (isParseStop) {
+                            return;
+                        };
                     };
                 };
 
-                j += 1;
                 continue;
             };
 
+            // QUESTION
+            // ---------------------------------------------
             if (w === 63) { // "?"
-                j = xml.indexOf('?>', i);
-                if (j === -1) { // error
-                    onError(returnError = '...?>');
+                let indexEndQuestion = xml.indexOf('?>', i);
+                if (indexEndQuestion === -1) { // error
+                    returnError = 'expected question ...?>'; // повторим попытку на след. write
                     return;
                 };
+
+                indexStartXML = indexEndQuestion + 2;
 
                 if (is_onQuestion) {
-                    onQuestion(xml.substring(i, j + 2));
-                    if (parseStop) {
+                    onQuestion(xml.substring(i, indexStartXML)); // весь тег, так как не придумал api
+                    if (isParseStop) {
                         return;
                     };
                 };
-
-                j += 2;
                 continue;
             };
 
-            j = xml.indexOf('>', i + 1);
 
-            if (j == -1) { // error
-                onError(returnError = 'unclosed tag'); // ...>
+            // NODE ELEMENT
+            // ---------------------------------------------
+
+            let indexEndNode = xml.indexOf('>', i + 1);
+            if (indexEndNode === -1) { // error  ...> // не нашел знак закрытия тега
+                returnError = 'unclosed tag'; // повторим попытку на след. write
                 return;
             };
 
+
+            indexStartXML = indexEndNode + 1;
             attrRes = true; // атрибутов нет
 
-            //if (xml.charCodeAt(i+1) === 47) { // </...
             if (w === 47) { // </...
                 isTagStart = false;
                 isTagEnd = true;
 
-                // проверяем что должен быть закрыт тотже тег что и открывался
-                if (!nodestack.length) {
-                    onError(returnError = 'close tag, requires open tag');
+                // проверяем что тег должен быть закрыт тот-же что и открывался
+                if (!parseStackNodes.length) {
+                    onError(returnError = 'close tag, requires open tag'); // дальнейший разбор невозможен
                     return;
                 };
 
-                x = elem = nodestack.pop();
-                q = i + 2 + elem.length;
+                nodeName = nodeBody = parseStackNodes.pop();
+                iQ = i + 2 + nodeName.length;
 
-                if (elem !== xml.substring(i + 2, q)) {
-                    onError(returnError = 'close tag, not equal to the open tag');
+                if (nodeName !== xml.substring(i + 2, iQ)) {
+                    onError(returnError = 'close tag, not equal to the open tag'); // дальнейший разбор невозможен
                     return;
                 };
 
                 // проверим что в закрываюшем теге нет лишнего
-                for(; q < j; q++) {
-                    w = xml.charCodeAt(q);
-
+                for(; iQ < indexEndNode; iQ++) {
+                    let w = xml.charCodeAt(iQ);
                     if (w === 32 || (w > 8 && w < 14)) {  // \f\n\r\t\v пробел
                         continue;
                     };
 
-                    onError(returnError = 'close tag');
+                    onError(returnError = 'close tag, unallowable char'); // дальнейший разбор невозможен
                     return;
                 };
 
             } else {
-                if (xml.charCodeAt(j - 1) ===  47) { // .../>
-                    x = elem = xml.substring(i + 1, j - 1);
+
+                if (!(w > 96  && w < 123 || w > 64 && w < 91 || w === 95 || w === 58)) { // char 95"_" 58":"
+                    onError(returnError = 'first char <nodeName .../>'); // дальнейший разбор невозможен
+                    return;
+                };
+
+                if (xml.charCodeAt(indexEndNode - 1) ===  47) { // .../>
+                    nodeBody = xml.substring(i + 1, indexEndNode - 1);
 
                     isTagStart = true;
                     isTagEnd = true;
 
                 } else {
-                    x = elem = xml.substring(i + 1, j);
+                    nodeBody = xml.substring(i + 1, indexEndNode);
 
                     isTagStart = true;
                     isTagEnd = false;
                 };
 
-                if (!(w > 96  && w < 123 || w > 64 && w < 91 || w === 95 || w === 58)) { // char 95"_" 58":"
-                    onError(returnError = 'first char nodeName');
-                    return;
-                };
+                nodeName = nodeBody;
+                iQ = 1;
 
-                for (q = 1, y = x.length; q < y; q++) {
-                    w = x.charCodeAt(q);
+                for (let iY = nodeBody.length; iQ < iY; iQ++) {
+                    let w = nodeBody.charCodeAt(iQ);
 
                     if (w > 96 && w < 123 || w > 64 && w < 91 || w > 47 && w < 59 || w === 45 || w === 95) {
-                        continue;
+                        continue; // символы имени тега только латиница
                     };
 
                     if (w === 32 || (w < 14 && w > 8)) { // \f\n\r\t\v пробел
+                        nodeName = nodeBody.substring(0, iQ)
                         attrRes = null; // возможно есть атирибуты
-                        elem = x.substring(0, q)
                         break;
                     };
 
-                    onError(returnError = 'invalid nodeName');
+                    onError(returnError = 'invalid nodeName'); // дальнейший разбор невозможен
                     return;
                 };
 
                 if (!isTagEnd) {
-                    nodestack.push(elem);
+                    parseStackNodes.push(nodeName);
                 };
             };
 
 
             if (isNamespace) {
-                if (stop) { // потомки неизвестного пространства имен
+                if (stopEmit) { // потомки неизвестного пространства имен
                     if (isTagEnd) {
                         if (!isTagStart) {
-                            if (--stopIndex === 0) {
-                                nsmatrix = stacknsmatrix.pop();
+                            if (--stopIndexNS === 0) {
+                                nsmatrix = parseStackMatrixNS.pop();
                             };
                         };
 
                     } else {
-                        stopIndex += 1;
+                        stopIndexNS += 1;
                     };
-
-                    j += 1;
                     continue;
                 };
 
-                // добавляем в stacknsmatrix только если !isTagEnd, иначе сохраняем контекст пространств в переменной
+                // добавляем в parseStackMatrixNS только если !isTagEnd, иначе сохраняем контекст пространств в переменной
                 _nsmatrix = nsmatrix;
                 if (!isTagEnd) {
-                    stacknsmatrix.push(nsmatrix);
+                    parseStackMatrixNS.push(nsmatrix);
                 };
 
                 if (isTagStart && (attrRes === null)) {
-                    if (hasSurmiseNS = x.indexOf('xmlns', q) !== -1) { // есть подозрение на xmlns
-                        attrStartPos = q;
-                        attrString = x;
+                    if (hasSurmiseNS = nodeBody.indexOf('xmlns', iQ) !== -1) { // есть подозрение на xmlns
+                        attrStartPos = iQ;
+                        attrString = nodeBody;
 
                         getAttrs();
-
                         hasSurmiseNS = false;
                     };
                 };
 
-                w = elem.indexOf(':');
-                if (w !== -1) {
-                    xmlns = nsmatrix[elem.substring(0, w)];
-                    elem = elem.substr(w + 1);
+                iD = nodeName.indexOf(':');
+                if (iD !== -1) {
+                    xmlns = nsmatrix[nodeName.substring(0, iD)];
+                    nodeName = nodeName.substr(iD + 1);
 
                 } else {
                     xmlns = nsmatrix.xmlns;
@@ -680,32 +745,30 @@ function EasySAXParser(config) {
                     if (isTagEnd) {
                         nsmatrix = _nsmatrix; // так как тут всегда isTagStart
                     } else {
-                        stopIndex = 1; // первый элемент для которого не определено пространство имен
+                        stopIndexNS = 1; // первый элемент для которого не определено пространство имен
                     };
-
-                    j += 1;
                     continue;
                 };
 
-                elem = xmlns + ':' + elem;
+                nodeName = xmlns + ':' + nodeName;
             };
 
-            stringNodePosStart = i;
-            stringNodePosEnd = j;
+            stringNodePosStart = i; // stringNodePosStart, stringNodePosEnd - для ручного разбора getStringNode()
+            stringNodePosEnd = indexStartXML;
 
             if (isTagStart) {
-                attrStartPos = q;
-                attrString = x;
+                attrStartPos = iQ;
+                attrString = nodeBody;
 
-                onStartNode(elem, getAttrs, isTagEnd, getStringNode);
-                if (parseStop) {
+                onStartNode(nodeName, getAttrs, isTagEnd, getStringNode);
+                if (isParseStop) {
                     return;
                 };
             };
 
             if (isTagEnd) {
-                onEndNode(elem, isTagStart, getStringNode);
-                if (parseStop) {
+                onEndNode(nodeName, isTagStart, getStringNode);
+                if (isParseStop) {
                     return;
                 };
 
@@ -713,12 +776,10 @@ function EasySAXParser(config) {
                     if (isTagStart) {
                         nsmatrix = _nsmatrix;
                     } else {
-                        nsmatrix = stacknsmatrix.pop();
+                        nsmatrix = parseStackMatrixNS.pop();
                     };
                 };
             };
-
-            j += 1;
         };
     };
 };
