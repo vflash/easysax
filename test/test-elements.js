@@ -10,12 +10,59 @@ var test = require('./easysax.test.js');
 
 
 
-
 test({
     xml: '<div/>',
     to: [
-        ['startNode', 'div', true, true],
+        ['startNode', 'div', true /*attrs*/, true],
         ['endNode', 'div', true],
+    ],
+});
+
+test({
+    xml: '<div />',
+    to: [
+        ['startNode', 'div', true /*attrs*/, true],
+        ['endNode', 'div', true],
+    ],
+});
+
+
+test({
+    xml: '<dateTime.iso8601 />',
+    to: [
+        ['startNode', 'dateTime.iso8601', true, true],
+        ['endNode', 'dateTime.iso8601', true],
+    ],
+});
+
+test({
+    xml: '<a></a>',
+    to: [
+        ['startNode', 'a', true, false],
+        ['endNode', 'a', false],
+    ],
+});
+
+test({
+    xml: '<a></a \u000F>',
+    to: [
+        ['startNode', 'a', true, false],
+        ['error'],
+    ],
+});
+
+test({
+    xml: '<A\u000Ctitle="xx"></A>',
+    to: [
+        ['startNode', 'A', {title: 'xx'}, false],
+        ['endNode', 'A', false],
+    ],
+});
+
+test({
+    xml: '01234567890qwertyuiopasdfghjkl',
+    to: [
+        ['error'],
     ],
 });
 
@@ -168,6 +215,54 @@ test({
     ],
 });
 
+test({
+    xml: '<!XXXXX zzzz="eeee"><xml/>',
+    to: [
+        ['attention', '<!XXXXX zzzz="eeee">'],
+        ['startNode', 'xml', true, true],
+        ['endNode', 'xml', true],
+    ],
+});
+
+
+test({
+    xml: '<? QUESTION ?><xml/>',
+    to: [
+        ['question', '<? QUESTION ?>'],
+        ['startNode', 'xml', true, true],
+        ['endNode', 'xml', true],
+    ],
+});
+
+test({
+    xml: '<? QUESTION',
+    to: [
+        ['error'],
+    ],
+});
+
+
+
+// // processing instruction + whitespace outside of root node
+// test({
+//     xml: '<?xml version="1.0" encoding="UTF-8"?>\n\t <root/>\n',
+//     to: [
+//         ['question', '<?xml version="1.0" encoding="UTF-8"?>'],
+//         ['startNode', 'root'],
+//         ['endNode', 'root']
+//     ],
+// });
+//
+// // processing instruction + non-whitespace outside of root node
+// test({
+//     xml: '<?xml version="1.0" encoding="UTF-8"?>  blablabla  <root/>\n',
+//     expect: [
+//         ['question', '<?xml version="1.0" encoding="UTF-8"?>'],
+//         ['warn', 'non-whitespace outside of root node'], // ?? is error xml
+//         ['startNode', 'root'],
+//         ['endNode', 'root']
+//     ],
+// });
 
 
 test({
@@ -324,5 +419,43 @@ test({
         ['textNode', 'text'],
         ['endNode', 'aaa:title'],
         ['endNode', 'atom:feed'],
+    ],
+});
+
+test({
+    xml: [
+        '<',
+        'abcdefghijklmn',
+        'opqrstuvwxyzABC',
+        'DEFGHIJKLMNOPQR',
+        'STUVWXYZ>',
+        'yo y',
+        'o<',
+        '/abcdefghijklm',
+        'nopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ>',
+    ],
+    to: [
+        ['startNode', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'],
+        ['textNode', 'yo yo'],
+        ['endNode', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'],
+    ],
+});
+
+test({
+    autoEntity: true,
+    xml: '<a>&lt;--&gt;</a>',
+    to: [
+        ['startNode', 'a', true, false],
+        ['textNode', '<-->'],
+        ['endNode', 'a', false],
+    ],
+});
+
+test({
+    autoEntity: true,
+    xml: '<a title="&lt;--&gt;"></a>',
+    to: [
+        ['startNode', 'a', {title: '<-->'}, false],
+        ['endNode', 'a', false],
     ],
 });

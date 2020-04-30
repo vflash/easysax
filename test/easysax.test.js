@@ -19,7 +19,10 @@ test({
 */
 
 module.exports = function(op) {
-    it(op.xml.substr(0, 275), function() {
+    var name = Array.isArray(op.xml) ? op.xml.join('|') : '' + op.xml;
+    //var name = JSON.stringify(op.xml);
+
+    it(name.substr(0, 275), function() {
         assert.equal(false, test(op || false));
     });
 };
@@ -31,12 +34,15 @@ function test(options) {
     var list = [].concat(options.to);
 
     if (!parser) {
-        parser = new easysax();
-        parser.ns(options.ns || false, {
-            'http://search.yahoo.com/mrss/': 'media',
-            'http://www.w3.org/1999/xhtml': 'xhtml',
-            'http://www.w3.org/2005/Atom': 'atom',
-            'http://purl.org/rss/1.0/': 'rss',
+        parser = new easysax({
+            autoEntity: !!options.autoEntity,
+            defaultNS: options.ns,
+            ns: {
+                'http://search.yahoo.com/mrss/': 'media',
+                'http://www.w3.org/1999/xhtml': 'xhtml',
+                'http://www.w3.org/2005/Atom': 'atom',
+                'http://purl.org/rss/1.0/': 'rss',
+            },
         });
     };
 
@@ -123,12 +129,29 @@ function test(options) {
         test('comment', text);
     });
 
+    parser.on('attention', function(text) {
+        test('attention', text);
+    });
+
+    parser.on('question', function(text) {
+        test('question', text);
+    });
+
+
     parser.on('unknownNS', function(value) {
         test('unknownNS', value);
         return value === 'AAA' ? 'aaa' : (value === 'BBB' ? 'bbb' : null);
     });
 
-    parser.parse(options.xml);
+    var xml = options.xml;
+    if (Array.isArray(xml)) {
+        xml.forEach(chunk => parser.write(chunk));
+        parser.end();
+
+    } else {
+        parser.parse(xml);
+    };
+
     return error;
 };
 

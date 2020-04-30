@@ -55,6 +55,7 @@ var stringFromCharCode = String.fromCharCode;
 var objectCreate = Object.create;
 function NULL_FUNC() {};
 
+
 function entity2char(x) {
     if (x === 'amp') {
         return '&';
@@ -220,7 +221,7 @@ function EasySAXParser(config) {
     };
 
     this.write = function(chunk) {
-        if (typeof chunk !== 'string') {
+        if (typeof chunk !== 'string' || isParseStop) {
             return;
         };
 
@@ -231,6 +232,13 @@ function EasySAXParser(config) {
 
         xml = xml ? xml + chunk : chunk;
         parse();
+
+        if (isParseStop && returnError) {
+            if (returnError) {
+                onError(returnError);
+                returnError = '';
+            };
+        };
 
         if (indexStartXML > 0) {
             xml = xml.substring(indexStartXML);
@@ -243,6 +251,7 @@ function EasySAXParser(config) {
     this.end = function() {
         if (returnError) {
             onError(returnError);
+            returnError = '';
         };
 
         attrString = '';
@@ -421,23 +430,22 @@ function EasySAXParser(config) {
             };
 
             if (nsAttrName = nsmatrix[name.substring(0, iQ)]) {
-                nsAttrName = nsmatrix['xmlns'] === nsAttrName ? name.substr(iQ + 1) : nsAttrName + name.substr(iQ);
+                nsAttrName = nsmatrix.xmlns === nsAttrName ? name.substr(iQ + 1) : nsAttrName + name.substr(iQ);
                 res[nsAttrName + name.substr(iQ)] = value;
             };
         };
-
 
         if (!ok) {
             return attrRes = true;  // атрибутов нет, ошибок тоже нет
         };
 
         if (hasSurmiseNS)  {
-            xmlnsAlias = nsmatrix['xmlns'];
+            xmlnsAlias = nsmatrix.xmlns;
 
             for (i = 0, l = attrList.length; i < l; i++) {
-                let name = attrList[i++];
-
+                name = attrList[i++];
                 iK = name.indexOf(':');
+
                 if (iK !== -1) {
                     if (nsAttrName = nsmatrix[name.substring(0, iK)]) {
                         nsAttrName = xmlnsAlias === nsAttrName ? name.substr(iK + 1) : nsAttrName + name.substr(iK);
@@ -630,7 +638,8 @@ function EasySAXParser(config) {
 
                 // проверяем что тег должен быть закрыт тот-же что и открывался
                 if (!parseStackNodes.length) {
-                    onError(returnError = 'close tag, requires open tag'); // дальнейший разбор невозможен
+                    returnError = 'close tag, requires open tag';
+                    isParseStop = true; // дальнейший разбор невозможен
                     return;
                 };
 
@@ -638,7 +647,8 @@ function EasySAXParser(config) {
                 iQ = i + 2 + nodeName.length;
 
                 if (nodeName !== xml.substring(i + 2, iQ)) {
-                    onError(returnError = 'close tag, not equal to the open tag'); // дальнейший разбор невозможен
+                    returnError = 'close tag, not equal to the open tag';
+                    isParseStop = true; // дальнейший разбор невозможен
                     return;
                 };
 
@@ -649,14 +659,16 @@ function EasySAXParser(config) {
                         continue;
                     };
 
-                    onError(returnError = 'close tag, unallowable char'); // дальнейший разбор невозможен
+                    returnError = 'close tag, unallowable char';
+                    isParseStop = true; // дальнейший разбор невозможен
                     return;
                 };
 
             } else {
 
                 if (!(w > 96  && w < 123 || w > 64 && w < 91 || w === 95 || w === 58)) { // char 95"_" 58":"
-                    onError(returnError = 'first char <nodeName .../>'); // дальнейший разбор невозможен
+                    returnError = 'first char <nodeName .../>';
+                    isParseStop = true; // дальнейший разбор невозможен
                     return;
                 };
 
@@ -679,7 +691,7 @@ function EasySAXParser(config) {
                 for (let iY = nodeBody.length; iQ < iY; iQ++) {
                     let w = nodeBody.charCodeAt(iQ);
 
-                    if (w > 96 && w < 123 || w > 64 && w < 91 || w > 47 && w < 59 || w === 45 || w === 95) {
+                    if (w > 96 && w < 123 || w > 64 && w < 91 || w > 47 && w < 59 || w === 45 || w === 46 || w === 95) {
                         continue; // символы имени тега только латиница
                     };
 
@@ -689,7 +701,8 @@ function EasySAXParser(config) {
                         break;
                     };
 
-                    onError(returnError = 'invalid nodeName'); // дальнейший разбор невозможен
+                    returnError = 'invalid nodeName';
+                    isParseStop = true; // дальнейший разбор невозможен
                     return;
                 };
 
