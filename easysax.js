@@ -148,10 +148,6 @@ function EasySAXParser(config) {
     var attrString; // строка атрибутов <(div class="xxxx" title="sssss")/>
     var attrRes; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
 
-    var attrPointsLength = 0;
-    var attrPoints = {'0': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0};
-    var attrPoints = objectCreate(null);
-
     function reset() {
         if (isNamespace) {
             nsmatrix = objectCreate(null);
@@ -373,7 +369,7 @@ function EasySAXParser(config) {
             attrName = xml.substring(i, iR);
             if (isNamespace) {
                 attrName = attrName.trim();
-                if (attrName === 'xmlns') {
+                if (attrName.indexOf('xmlns') === 0) {
                     nodeParseHasNS = true;
                 };
             };
@@ -405,9 +401,9 @@ function EasySAXParser(config) {
                 break;
             };
 
-            if (iE - i < 4) {
-                break;
-            };
+            //if (iE - i < 4) {
+            //    break;
+            //};
 
             if (i > iE) {
                 iE = xml.indexOf('>', i);
@@ -421,6 +417,63 @@ function EasySAXParser(config) {
         return iE;
     };
 
+    function upNSMATRIX() {
+        var hasNewMatrix;
+        var newalias;
+        var alias;
+        var value;
+        var name;
+        var j;
+
+        if (!nodeParseAttrSize) {
+            return;
+        };
+
+        for (j = 0; j < nodeParseAttrSize; j += 2) {
+            name = nodeParseAttrMap[j];
+
+            newalias = (name !== 'xmlns'
+                ? (name.charCodeAt(0) === 120 && name.substr(0, 6) === 'xmlns:'
+                    ? name.substr(6)
+                    : null
+                )
+                : 'xmlns'
+            );
+
+            if (newalias === null) {
+                continue;
+            };
+
+            value = nodeParseAttrMap[j + 1];
+            //alias = useNS[isAutoEntity ? value : entityDecode(value)];
+            alias = useNS[entityDecode(value)];
+
+            if (is_onUnknownNS && !alias) {
+                alias = onUnknownNS(value);
+            };
+
+            if (alias) {
+                if (nsmatrix[newalias] !== alias) {
+                    if (!hasNewMatrix) {
+                        nsmatrix = cloneMatrixNS(nsmatrix);
+                        hasNewMatrix = true;
+                    };
+                    nsmatrix[newalias] = alias;
+                };
+
+                continue;
+            };
+
+            if (nsmatrix[newalias]) {
+                if (!hasNewMatrix) {
+                    nsmatrix = cloneMatrixNS(nsmatrix);
+                    hasNewMatrix = true;
+                };
+                nsmatrix[newalias] = false;
+            };
+        };
+    };
+
     function getAttrs() {
         if (nodeParseAttrResult !== null) {
             return nodeParseAttrResult;
@@ -430,14 +483,35 @@ function EasySAXParser(config) {
             return nodeParseAttrResult = true;
         };
 
+        var xmlnsAlias;
+        var nsName;
+        var iQ;
+
         var attrs = {};
         var value;
         var name;
-        var j = 0;
+        var j;
 
-        for (; j < nodeParseAttrSize; j++) {
+
+        if (isNamespace) {
+            //upNSMATRIX();
+            xmlnsAlias = nsmatrix.xmlns;
+        };
+
+        for (j = 0; j < nodeParseAttrSize; j++) {
             name = isNamespace ? nodeParseAttrMap[j] : nodeParseAttrMap[j].trim();
             value = nodeParseAttrMap[++j];
+
+            if (isNamespace) {
+                iQ = name.indexOf(':');
+                if (iQ !== -1) {
+                    nsName = nsmatrix[name.substring(0, iQ)];
+                    if (!nsName || nsName === 'xmlns') {
+                        continue;
+                    };
+                    name = xmlnsAlias !== nsName ? nsName + name.substr(iQ) : name.substr(iQ + 1);
+                };
+            };
 
             if (isAutoEntity) {
                 value = entityDecode(value);
@@ -810,17 +884,13 @@ function EasySAXParser(config) {
             // NODE ELEMENT
             // ---------------------------------------------
 
-            attrPointsLength = 0;
-
-            let indexEndNode = (w === 47 ? xml.indexOf('>', i + 1) : parseNode(i));
-            if (indexEndNode === -1) { // error  ...> // не нашел знак закрытия тега
-                returnError = returnError || 'unclosed tag'; // повторим попытку на след. write
-                return;
-            };
-
-            indexStartXML = indexEndNode + 1;
-
             if (w === 47) { // </...
+                let indexEndNode = xml.indexOf('>', i + 1);
+                if (indexEndNode === -1) { // error  ...> // не нашел знак закрытия тега
+                    returnError = returnError || 'unclosed tag'; // повторим попытку на след. write
+                    return;
+                };
+
                 isTagStart = false;
                 isTagEnd = true;
 
@@ -852,22 +922,24 @@ function EasySAXParser(config) {
                     return;
                 };
 
+                indexStartXML = indexEndNode + 1;
+
             } else {
+                let indexEndNode = parseNode(i);
+                if (indexEndNode === -1) { // error  ...> // не нашел знак закрытия тега
+                    returnError = returnError || 'unclosed tag'; // повторим попытку на след. write
+                    return;
+                };
+
                 isTagStart = true;
                 isTagEnd = xml.charCodeAt(indexEndNode - 1) === 47;
-
-                // if (isTagEnd) { // .../>
-                //     nodeBody = xml.substring(i + 1, indexEndNode - 1);
-                // } else {
-                //     nodeBody = xml.substring(i + 1, indexEndNode);
-                // };
-
                 nodeName = nodeParseName;
-                iQ = 1;
 
                 if (!isTagEnd) {
                     parseStackNodes.push(nodeName);
                 };
+
+                indexStartXML = indexEndNode + 1;
             };
 
 
@@ -892,10 +964,8 @@ function EasySAXParser(config) {
                     parseStackMatrixNS.push(nsmatrix);
                 };
 
-                if (isTagStart && (nodeParseAttrResult === null)) {
-                    if (nodeParseHasNS) { // есть подозрение на xmlns
-                        getAttrs();
-                    };
+                if (isTagStart && nodeParseHasNS) {  // есть подозрение на xmlns //  && (nodeParseAttrResult === null)
+                    upNSMATRIX();
                 };
 
                 iD = nodeName.indexOf(':');
@@ -906,7 +976,6 @@ function EasySAXParser(config) {
                 } else {
                     xmlns = nsmatrix.xmlns;
                 };
-
 
                 if (!xmlns) {
                     // элемент неизвестного пространства имен
@@ -925,9 +994,6 @@ function EasySAXParser(config) {
             stringNodePosEnd = indexStartXML;
 
             if (isTagStart) {
-                //attrStartPos = iQ;
-                //attrString = nodeBody;
-
                 onStartNode(nodeName, getAttrs, isTagEnd, getStringNode);
                 if (isParseStop) {
                     return;

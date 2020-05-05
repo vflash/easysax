@@ -65,7 +65,7 @@ function banch(_xml, _count, _only) {
     var list = [
         test_ltx,
 
-        //test_EasySax_on_on_on,
+        test_EasySax_on_on_on,
         test_EasySax_off_on_on,
         test_EasySax_off_off_on,
         test_EasySax_off_off_off,
