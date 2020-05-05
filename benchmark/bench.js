@@ -5,8 +5,44 @@ var count;
 var only;
 var xml;
 
+
+_ltx('<root aa  aa = "dd>d<d"  qqq = "adfadf"/>');
+
+function _ltx(xml) {
+    var LtxSaxParser = require('ltx/lib/parsers/ltx.js');
+
+    // (function() {
+    //     var parser = new LtxSaxParser();
+    //
+    //     parser.on('startElement', function() {
+    //         console.log(arguments);
+    //     })
+    //     parser.on('endElement', nullfunc)
+    //     parser.on('text', nullfunc);
+    //
+    //     parser.end(xml);
+    // })();
+
+    (function() {
+        console.log(4444, xml);
+        var parser = new EasySax({
+            autoEntity: true,
+            on: {
+                startNode: function(name, attr) {
+                    console.log(name, attr());
+                },
+                endNode: nullfunc,
+                text: nullfunc,
+            },
+        });
+
+        parser.parse(xml);
+    })();
+
+};
+
+
 function banch(_xml, _count, _only) {
-    'use strict';
 
     //var only = /^easysax ns=off uq=on attr=on/;
     //var count = 1;
@@ -27,9 +63,9 @@ function banch(_xml, _count, _only) {
 
 
     var list = [
-        //test_ltx,
+        test_ltx,
 
-        test_EasySax_on_on_on,
+        //test_EasySax_on_on_on,
         test_EasySax_off_on_on,
         test_EasySax_off_off_on,
         test_EasySax_off_off_off,
@@ -165,16 +201,22 @@ function test_nodeExpat_Buffer(xml) {
 
 function test_ltx(xml) {
     var LtxSaxParser = require('ltx/lib/parsers/ltx.js');
+    var countNodes = 0;
 
     test('ltx', function() {
         var parser = new LtxSaxParser();
 
-        parser.on('startElement', nullfunc)
+        parser.on('startElement', function() {
+            countNodes += 1;
+        })
         parser.on('endElement', nullfunc)
         parser.on('text', nullfunc);
 
         parser.end(xml);
+
     });
+
+    console.log('countNodes:', countNodes);
 
 };
 
