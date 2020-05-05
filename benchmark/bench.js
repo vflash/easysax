@@ -199,6 +199,25 @@ function test_nodeExpat_Buffer(xml) {
     });
 };
 
+function test_saxophone(xml) {
+    var Saxophone = require('saxophone');
+
+    test('saxophone', function() {
+        var parser = new Saxophone();
+
+        parser.on('tagopen', function(tag) {
+                Saxophone.parseAttrs(tag.attrs);
+        });
+        parser.on('tagclose', nullfunc)
+        parser.on('text', function(op) {
+                Saxophone.parseEntities(op.contents)
+        });
+
+        parser.end(xml);
+    });
+};
+
+
 function test_ltx(xml) {
     var LtxSaxParser = require('ltx/lib/parsers/ltx.js');
     var countNodes = 0;
