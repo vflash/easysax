@@ -357,7 +357,6 @@ function EasySAXParser(config) {
 
         i += 1; // первый сивол пробел его пропускаем
 
-
         while(true) {
             iR = xml.indexOf('=', i);
 
@@ -369,7 +368,7 @@ function EasySAXParser(config) {
             attrName = xml.substring(i, iR);
             if (isNamespace) {
                 attrName = attrName.trim();
-                if (attrName.indexOf('xmlns') === 0) {
+                if (attrName.charCodeAt(0) === 120 && attrName.substr(0, 6) === 'xmlns') {
                     nodeParseHasNS = true;
                 };
             };
@@ -401,16 +400,16 @@ function EasySAXParser(config) {
                 break;
             };
 
-            //if (iE - i < 4) {
-            //    break;
-            //};
-
             if (i > iE) {
                 iE = xml.indexOf('>', i);
                 if (iE === -1)  {
                     returnError = '#0901 invalid node'; // не полный xml
                     return -1;
                 };
+            };
+
+            if (iE - i < 4) {
+                break;
             };
         };
 
@@ -522,205 +521,6 @@ function EasySAXParser(config) {
 
         return nodeParseAttrResult = attrs;
     };
-
-    /*
-        парсит атрибуты по требованию. Важно! - функция не генерирует исключения.
-
-        если была ошибка разбора возврашается false
-        если атрибутов нет и разбор удачен то возврашается true
-        если есть атрибуты то возврашается обьект(хеш)
-    */
-
-    function _getAttrs() {
-        if (attrRes !== null) {
-            return attrRes;
-        };
-
-        var xmlnsAlias;
-        var nsAttrName;
-        var attrList = isNamespace && nodeParseHasNS ? [] : null;
-        var i = attrStartPos + 1; // так как первый символ уже был проверен
-        var s = attrString;
-        var l = s.length;
-        var hasNewMatrix;
-        var newalias;
-        var value;
-        var alias;
-        var name;
-        var res = {};
-        var ok;
-        var iQ;
-        var iK;
-        var w;
-        var j;
-
-
-        for(; i < l; i++) {
-            // if (false) {
-            //     w = s.charCodeAt(i);
-            //
-            //     if (w === 32 || (w < 14 && w > 8) ) { // \f\n\r\t\v
-            //         continue
-            //     };
-            //
-            //     if (w < 65 || w > 122 || (w > 90 && w < 97) ) { // недопустимые первые символы
-            //         if (w !== 95 && w !== 58) { // char 95"_" 58":"
-            //             return attrRes = false; // error. invalid first char
-            //         };
-            //     };
-            //
-            //     for(j = i + 1; j < l; j++) { // проверяем все символы имени атрибута
-            //         w = s.charCodeAt(j);
-            //
-            //         if ( w > 96 && w < 123 || w > 64 && w < 91 || w > 47 && w < 59 || w === 45 || w === 95) {
-            //             continue;
-            //         };
-            //
-            //         if (w !== 61) { // "=" == 61
-            //             return attrRes = false; // error. invalid char "="
-            //         };
-            //
-            //         break;
-            //     };
-            // } else {
-            //     j = s.indexOf('=', i);
-            // };
-
-            j = s.indexOf('=', i);
-
-            name = s.substring(i, j).trim();
-            //name = xtrim(s.substring(i, j));
-            //name = s.substring(i, j);
-            ok = true;
-
-            if (name === 'xmlns:xmlns') {
-                return attrRes = false; // error. invalid name
-            };
-
-
-            j += 1;
-            w = s.charCodeAt(j);
-
-            while(w === 32 || (w < 14 && w > 8)) { // \f\n\r\t\v
-                j += 1;
-                w = s.charCodeAt(j);
-            };
-
-            if (w === 34) {  // '"'
-                j = s.indexOf('"', i = j + 1);
-
-            } else {
-                if (w !== 39) { // "'"
-                    return attrRes = false; // error. invalid char
-                };
-
-                j = s.indexOf('\'', i = j + 1);
-            };
-
-            if (j === -1) {
-                return attrRes = false; // error. invalid char
-            };
-
-            if (j + 1 < l) {
-                w = s.charCodeAt(j + 1);
-
-                if (w > 32 || w < 9 || (w < 32 && w > 13)) {
-                    // error. invalid char
-                    return attrRes = false;
-                };
-            };
-
-
-            value = s.substring(i, j);
-            i = j + 1; // след. семвол уже проверен потому проверять нужно следуюший
-
-            if (isAutoEntity) {
-                value = entityDecode(value);
-            };
-
-            if (!isNamespace) { //
-                res[name] = value;
-                continue;
-            };
-
-            if (nodeParseHasNS) {
-                // есть подозрение что в атрибутах присутствует xmlns
-                newalias = (name !== 'xmlns'
-                    ? name.charCodeAt(0) === 120 && name.substr(0, 6) === 'xmlns:' ? name.substr(6) : null
-                    : 'xmlns'
-                );
-
-                if (newalias !== null) {
-                    alias = useNS[isAutoEntity ? value : entityDecode(value)];
-                    if (is_onUnknownNS && !alias) {
-                        alias = onUnknownNS(value);
-                    };
-
-                    if (alias) {
-                        if (nsmatrix[newalias] !== alias) {
-                            if (!hasNewMatrix) {
-                                nsmatrix = cloneMatrixNS(nsmatrix);
-                                hasNewMatrix = true;
-                            };
-
-                            nsmatrix[newalias] = alias;
-                        };
-                    } else {
-                        if (nsmatrix[newalias]) {
-                            if (!hasNewMatrix) {
-                                nsmatrix = cloneMatrixNS(nsmatrix);
-                                hasNewMatrix = true;
-                            };
-
-                            nsmatrix[newalias] = false;
-                        };
-                    };
-
-                    res[name] = value;
-                    continue;
-                };
-
-                attrList.push(name, value);
-                continue;
-            };
-
-            iQ = name.indexOf(':');
-            if (iQ === -1) {
-                res[name] = value;
-                continue;
-            };
-
-            if (nsAttrName = nsmatrix[name.substring(0, iQ)]) {
-                nsAttrName = nsmatrix.xmlns === nsAttrName ? name.substr(iQ + 1) : nsAttrName + name.substr(iQ);
-                res[nsAttrName + name.substr(iQ)] = value;
-            };
-        };
-
-        if (!ok) {
-            return attrRes = true;  // атрибутов нет, ошибок тоже нет
-        };
-
-        if (nodeParseHasNS)  {
-            xmlnsAlias = nsmatrix.xmlns;
-
-            for (i = 0, l = attrList.length; i < l; i++) {
-                name = attrList[i++];
-                iK = name.indexOf(':');
-
-                if (iK !== -1) {
-                    if (nsAttrName = nsmatrix[name.substring(0, iK)]) {
-                        nsAttrName = xmlnsAlias === nsAttrName ? name.substr(iK + 1) : nsAttrName + name.substr(iK);
-                        res[nsAttrName] = attrList[i];
-                    };
-                    continue;
-                };
-                res[name] = attrList[i];
-            };
-        };
-
-        return attrRes = res;
-    };
-
 
     function getStringNode() { // вернет исходную строку узла
         return xml.substring(stringNodePosStart, stringNodePosEnd);
