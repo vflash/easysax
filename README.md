@@ -1,13 +1,10 @@
 EASYSAX - pure javascript sax-style parser for xml
 ==================================================
-Простой и быстрый SAX парсер XML.
-Парсер не потоковый, и не расчитан на гиганские файлы.
-Весь XML должен быть в памяти.
-Встроен механизм работы с пространсвами имен.
+Simple and fast SAX XML parser.
+Supports namespace normalization
 
-
-Парсер был написан для RSS ридера http://zzreader.com
-На конец 2017 года остается самым быстрым SAX парсером XML под NODE.JS
+The parser was written for the RSS reader http://zzreader.com (not working)
+Remains the fastest SAX XML parser for JS by 2025
 
 Install
 ---------------------------------------------------
@@ -72,12 +69,12 @@ easysax ns=off entityDecode=off getAttr=off: 405.799ms
 
 
 
-Пример использования
+Example of use
 ---------------------------------------------------
 ```js
 var parser = new EasySax();
 
-// если требуется пространство имен
+// if namespace is required
 parser.ns('rss', {
 	'http://www.w3.org/2005/Atom': 'atom',
 	'http://www.w3.org/1999/xhtml': 'xhtml',
@@ -98,26 +95,26 @@ parser.on('error', function(msg) {
 });
 
 parser.on('startNode', function(elementName, getAttr, isTagEnd, getStringNode) {
-	// elementName -- (string) название элемента. при указании пространства имен, то автоматически подставляется префикс
-	// getAttr() -- (function) парсит атрибуты и возврашает обьект.
-	// isTagEnd -- (boolean) флаг что элемент пустой "<elem/>"
-	// getStringNode() -- (function) возвращает нераспарсенная строка элемента. Пример: <item title="text" id="x345">
+	// elementName -- (string) element name. If namespaces are enabled, it automatically sets the prefix
+	// getAttr() -- (function) parse attributes and return an object
+	// isTagEnd -- (boolean) flag that the element is empty "<elem/>"
+	// getStringNode() -- (function) returns the unparsed string of the element. example: <item title="text" id="x345">
 });
 
 parser.on('endNode', function(elementName, isTagStart, getStringNode) {
-	// isTagStart -- (boolean) флаг что элемент пустой "<elem/>"
+	// isTagStart -- (boolean) flag that the element is empty "<elem/>"
 });
 
 parser.on('textNode', function(text) {
-	// text -- (String) строка текста
+	// text -- (String) line of text
 });
 
 parser.on('cdata', function(text) {
-    // text -- (String) строка текста элемента CDATA
+    // text -- (String) CDATA element text string
 });
 
 parser.on('comment', function(text) {
-	// text - (String) текст комментария
+	// text - (String) comment text
 });
 
 //parser.on('question', function() {}); // <? ... ?>

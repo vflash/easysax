@@ -1,0 +1,3 @@
+#!/bin/bash
+
+npm i --no-save ltx sax saxophone saxen node-expat libxmljs sax-wasm

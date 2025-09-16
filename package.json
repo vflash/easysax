@@ -10,15 +10,14 @@
 		"parser",
 		"pure"
 	],
-	"version": "1.0.0",
+	"version": "0.4.0",
 	"main": "./easysax.js",
 	"bugs": {
 		"url": "https://github.com/vflash/easysax/issues"
 	},
 	"author": {
 		"name": "Vopilovskiy Konstantin",
-		"email": "flash.vkv@gmail.com",
-		"url": "http://vflash.ru"
+		"email": "flash.vkv@gmail.com"
 	},
 	"files": [
 		"easysax.js",
