@@ -20,16 +20,14 @@ var fs = require('fs');
 
 (async function go() {
     await test(test_empty);
-    console.log('')
     await test(test_EasySax_on_on_on);
     await test(test_EasySax_off_on_on);
     await test(test_EasySax_off_off_on);
     await test(test_EasySax_off_off_off);
-    console.log('')
     await test(test_ltx);
-    await test(test_saxwasm_zero);
-    await test(test_saxwasm_full);
-    await test(test_saxwasm);
+    //await test(test_saxwasm_zero);
+    //await test(test_saxwasm_full);
+    //await test(test_saxwasm);
 })();
 
 

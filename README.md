@@ -18,8 +18,33 @@ $ npm install easysax
 
 Benchmark
 ---------------------------------------------------
-https://github.com/vflash/sax-benchmark
 
+**sh: node benchmark/stream.js**
+```
+file: mock                                                              elems    text
+------------------------------------------------------------------------------------------
+only load                      - total: 91.13    time: 0.35     500 MB
+easysax ns=on  uq=on  attr=on  - total: 2238.40  time: 2151.18  500 MB 6254753  6254754
+easysax ns=off uq=on  attr=on  - total: 1840.96  time: 1755.02  500 MB 6254753  6254754
+easysax ns=off uq=off attr=on  - total: 1711.58  time: 1625.02  500 MB 6254753  6254754
+easysax ns=off uq=off attr=off - total: 1383.35  time: 1296.81  500 MB 6254753  6254754
+ltx                            - total: 2563.93  time: 2477.30  500 MB 6254753  6254753
+```
+
+**sh: node benchmark/stream.js -file AS_HOUSES_PARAMS.XML**
+```
+file: ./AS_HOUSES_PARAMS.XML                                            elems    text
+------------------------------------------------------------------------------------------
+only load                      - total: 3777.53  time: 5.34     4.74 GB
+easysax ns=on  uq=on  attr=on  - total: 44596.10 time: 40821.88 4.74 GB 27997407 1
+easysax ns=off uq=on  attr=on  - total: 39105.67 time: 35382.78 4.74 GB 27997407 1
+easysax ns=off uq=off attr=on  - total: 36759.76 time: 32966.74 4.74 GB 27997407 1
+easysax ns=off uq=off attr=off - total: 20291.19 time: 16555.40 4.74 GB 27997407 1
+ltx                            - total: 57810.57 time: 54235.45 4.74 GB 27997407 1
+```
+
+
+https://github.com/vflash/sax-benchmark
 
 **sh: node bench-01.js**
 ```
@@ -68,6 +93,7 @@ expat : 6734.018ms
 expat buffer: 5865.209ms
 ltx: 2953.910ms
 ```
+
 
 
 
