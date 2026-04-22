@@ -1,34 +1,51 @@
-var FILE_NAME = './AS_SOCRBASE.XML';
-var FILE_NAME = './xml.xml';
+var FILE_NAME = null;
+var SIZE_MB = 500;
 
 process.argv.forEach((cmd, index, list) => {
     if (cmd === '-file' && list[index + 1]) {
         FILE_NAME = list[index + 1];
     };
+    if (cmd === '-size' && list[index + 1]) {
+        SIZE_MB = list[index + 1];
+    };
 });
 
-console.log(FILE_NAME);
+
+console.log(str('file: ' + FILE_NAME, 71) + ' elems    text');
+console.log("-".repeat(90));
 
 var {performance} = require('perf_hooks');
 var EasySax = require('../easysax.js');
 var fs = require('fs');
 
 (async function go() {
-    await test(test_ltx);
-    await test(test_saxwasm_zero);
-    await test(test_saxwasm_full);
-    await test(test_saxwasm);
-    // await test(test_ltx);
+    await test(test_empty);
+    console.log('')
     await test(test_EasySax_on_on_on);
     await test(test_EasySax_off_on_on);
     await test(test_EasySax_off_off_on);
     await test(test_EasySax_off_off_off);
+    console.log('')
+    await test(test_ltx);
+    await test(test_saxwasm_zero);
+    await test(test_saxwasm_full);
+    await test(test_saxwasm);
 })();
 
 
+function formatBytes(bytes) {
+    if (bytes === 0) {
+        return '0 Bytes';
+    };
+    var k = 1024;
+    var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 function nullFunc() {};
 function str(value, len) {
-    return (value + '                                           ').slice(0, len);
+    return ((value ?? '') + " ".repeat(100)).slice(0, len);
 };
 
 async function test(test) {
@@ -37,16 +54,17 @@ async function test(test) {
 
         var timeTotal = performance.now();
         var time = 0;
+        var size = 0;
 
         var config = await test();
-        // time += performance.now() - timeTotal;
-
         var config_write = config.write;
         var config_end = config.end;
         var config_name = config.name;
 
-        var rstream = fs.createReadStream(FILE_NAME, config.utf !== false ? 'utf8' : null);
-        var size = 0;
+        var rstream = (FILE_NAME
+            ? fs.createReadStream(FILE_NAME, config.utf !== false ? 'utf8' : null)
+            : createMockXmlStream(SIZE_MB, config.utf !== false)
+        );
 
         rstream.on("data", function(chunk){
             var xt = performance.now();
@@ -63,7 +81,7 @@ async function test(test) {
             var total = performance.now() - timeTotal;
 
             if (log) {
-                console.log(`${str(config_name, 30)} - total: ${str(total.toFixed(2), 7)} time: ${str(time.toFixed(2), 7)}`, size, res?.countNodes, res?.countText);
+                console.log(`${str(config_name, 30)} - total: ${str(total.toFixed(2), 8)} time: ${str(time.toFixed(2), 8)}`, formatBytes(size), str(res?.countNodes, 8), (res?.countText ?? ''));
             };
             end();
         });
@@ -76,6 +94,64 @@ async function test(test) {
         await run(false);
     };
     await run(true);
+};
+
+
+const { Readable } = require('stream');
+
+/**
+ * Создает мок-поток (Readable), генерирующий XML заданного объема порциями по 64 КБ.
+ * @param {number} sizeInGb - Желаемый объем данных в ГБ.
+ * @param {boolean} isUtf8 - Нужно ли устанавливать кодировку utf8.
+ * @returns {Readable}
+ */
+function createMockXmlStream(sizeInMb = 1000, isUtf8 = true) {
+    const TARGET_SIZE_BYTES = sizeInMb * 1024 * 1024;
+    const CHUNK_SIZE = 64 * 1024; // 64 КБ
+    const repeat_x = 'x'.repeat(120);
+
+    const stream = Readable.from((async function* () {
+        let totalSent = 0;
+        let buffer = '<?xml version="1.0" encoding="UTF-8"?>\n<root>\n';
+
+        let i = 0;
+        while (totalSent < TARGET_SIZE_BYTES) {
+            // Генерируем повторяющийся блок
+            const item = `  <item id="${i++}"><payload>${repeat_x}</payload></item>\n`;
+            buffer += item;
+
+            // Как только накопили 64 КБ или больше — отдаем чанк в поток
+            if (buffer.length >= CHUNK_SIZE) {
+                yield buffer;
+                totalSent += buffer.length;
+                buffer = '';
+            }
+
+            // Оставляем запас под закрывающий тег в конце
+            if (totalSent + buffer.length > TARGET_SIZE_BYTES - 20) {
+                break;
+            }
+        }
+
+        yield buffer + '</root>';
+    })());
+
+    if (isUtf8) {
+        stream.setEncoding('utf8');
+    };
+
+    return stream;
+};
+
+async function test_empty() {
+    return {
+        name: 'only load',
+        utf: false,
+        write: async function(buffer) {
+        },
+        end: function() {
+        },
+    };
 };
 
 
