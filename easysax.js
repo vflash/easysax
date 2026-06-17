@@ -368,7 +368,7 @@ function EasySAXParser(config) {
 
             if (isNamespace) {
                 attrName = attrName.trim();
-                if (attrName.charCodeAt(0) === 120 && attrName.substr(0, 6) === 'xmlns') {
+                if (attrName === 'xmlns' || (attrName.charCodeAt(0) === 120 && attrName.substr(0, 6) === 'xmlns:')) {
                     nodeParseHasNS = true;
                 };
             };
@@ -483,9 +483,11 @@ function EasySAXParser(config) {
         var nsName;
         var iQ;
 
-        var attrs = {};
+        var attrs = objectCreate(null);
         var value;
+        var prefx;
         var name;
+        var has;
         var j;
 
 
@@ -495,27 +497,37 @@ function EasySAXParser(config) {
 
         for (j = 0; j < nodeParseAttrSize; j++) {
             name = isNamespace ? nodeParseAttrMap[j] : nodeParseAttrMap[j].trim();
+            j += 1;
 
             if (isNamespace) {
                 iQ = name.indexOf(':');
                 if (iQ !== -1) {
-                    nsName = nsmatrix[name.substring(0, iQ)];
-                    if (!nsName || nsName === 'xmlns') {
+                    prefx = name.substring(0, iQ);
+                    if (prefx === 'xmlns') {
+                        continue;
+                    };
+                    nsName = nsmatrix[prefx];
+                    if (!nsName) {
                         continue;
                     };
                     name = xmlnsAlias !== nsName ? nsName + name.substr(iQ) : name.substr(iQ + 1);
+                } else {
+                    if (name === 'xmlns') {
+                        continue;
+                    };
                 };
             };
 
-            value = nodeParseAttrMap[++j];
+            value = nodeParseAttrMap[j];
             if (isAutoEntity) {
                 value = entityDecode(value);
             };
 
             attrs[name] = value;
+            has = true;
         };
 
-        return nodeParseAttrResult = attrs;
+        return nodeParseAttrResult = has ? attrs : true;
     };
 
     function getStringNode() { // вернет исходную строку узла
@@ -587,7 +599,7 @@ function EasySAXParser(config) {
             w = xml.charCodeAt(i + 1);
 
             if (w === 33) { // 33 == "!"
-                let w = xml.charCodeAt(i + 2);
+                w = xml.charCodeAt(i + 2);
 
                 // CDATA
                 // ---------------------------------------------

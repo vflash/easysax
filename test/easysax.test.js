@@ -21,6 +21,9 @@ test({
 module.exports = function(op) {
     var name = Array.isArray(op.xml) ? op.xml.join('|') : '' + op.xml;
     //var name = JSON.stringify(op.xml);
+    if (!name.trim()) {
+        name = JSON.stringify(name);
+    };
 
     it(name.substr(0, 275), function() {
         assert.equal(false, test(op || false));
@@ -62,6 +65,7 @@ function test(options) {
             };
             return;
         };
+        var str = x => Object.prototype.toString.call(x);
 
         for(var index = 0, l = values.length; index < l; index++) {
             var value = values[index];
@@ -70,7 +74,7 @@ function test(options) {
                 var attrs = args[index];
                 if (!value || value === true) {
                     if (attrs !== value) {
-                        error = '#' + indexTest + ' событие ' + name + ':' + index + '  attr: ' + attrs + ' !== ' + value;
+                        error = '#' + indexTest + ' событие ' + name + ':' + index + '  attr: ' + str(attrs) + ' !== ' + value;
                         break;
                     };
                 };
