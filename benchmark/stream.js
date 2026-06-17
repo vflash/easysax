@@ -1,3 +1,9 @@
+var {SaxEventType, SAXParser} = require('sax-wasm');
+var {readFileSync} = require('fs');
+var {performance} = require('perf_hooks');
+var {Readable} = require('stream');
+var fs = require('fs');
+
 var FILE_NAME = null;
 var SIZE_MB = 500;
 
@@ -14,9 +20,7 @@ process.argv.forEach((cmd, index, list) => {
 console.log(str('file: ' + FILE_NAME, 71) + ' elems    text');
 console.log("-".repeat(90));
 
-var {performance} = require('perf_hooks');
 var EasySax = require('../easysax.js');
-var fs = require('fs');
 
 (async function go() {
     await test(test_empty);
@@ -24,7 +28,9 @@ var fs = require('fs');
     await test(test_EasySax_off_on_on);
     await test(test_EasySax_off_off_on);
     await test(test_EasySax_off_off_off);
+    await test(test_saxes);
     await test(test_ltx);
+
     //await test(test_saxwasm_zero);
     //await test(test_saxwasm_full);
     //await test(test_saxwasm);
@@ -59,30 +65,35 @@ async function test(test) {
         var config_end = config.end;
         var config_name = config.name;
 
-        var rstream = (FILE_NAME
+        var rstream = (FILE_NAME && log
             ? fs.createReadStream(FILE_NAME, config.utf !== false ? 'utf8' : null)
-            : createMockXmlStream(SIZE_MB, config.utf !== false)
+            : createMockXmlStream(log ? SIZE_MB : 20, config.utf !== false)
         );
 
-        rstream.on("data", function(chunk){
+        var onchunk = (chunk) => {
             var xt = performance.now();
             config_write(chunk);
             time += performance.now() - xt;
             size += chunk.length;
-        });
-
-        rstream.on("end", function(){
+        };
+        var onend = () => {
             var xt = performance.now();
             var res = config_end();
-            time += performance.now() - xt;
-
             var total = performance.now() - timeTotal;
-
+            time += performance.now() - xt;
             if (log) {
                 console.log(`${str(config_name, 30)} - total: ${str(total.toFixed(2), 8)} time: ${str(time.toFixed(2), 8)}`, formatBytes(size), str(res?.countNodes, 8), (res?.countText ?? ''));
             };
             end();
-        });
+        };
+
+        // // для работы лучше использовать for await
+        // for await (const chunk of rstream) {onchunk(chunk)};
+        // onend();
+
+        // для тестов лучше использовать .on()
+        rstream.on('data', onchunk);
+        rstream.on('end', onend);
 
         return p;
     };
@@ -94,8 +105,6 @@ async function test(test) {
     await run(true);
 };
 
-
-const { Readable } = require('stream');
 
 /**
  * Создает мок-поток (Readable), генерирующий XML заданного объема порциями по 64 КБ.
@@ -115,7 +124,7 @@ function createMockXmlStream(sizeInMb = 1000, isUtf8 = true) {
         let i = 0;
         while (totalSent < TARGET_SIZE_BYTES) {
             // Генерируем повторяющийся блок
-            const item = `  <item id="${i++}"><payload>${repeat_x}</payload></item>\n`;
+            const item = `  <item id="${i++}" v="&quot;big&quot;"><payload type="string">${repeat_x}</payload><hr/></item>\n`;
             buffer += item;
 
             // Как только накопили 64 КБ или больше — отдаем чанк в поток
@@ -144,17 +153,11 @@ function createMockXmlStream(sizeInMb = 1000, isUtf8 = true) {
 async function test_empty() {
     return {
         name: 'only load',
-        utf: false,
-        write: async function(buffer) {
-        },
-        end: function() {
-        },
+        utf: true,
+        write: async function(buffer) {},
+        end: function() {},
     };
 };
-
-
-var {SaxEventType, SAXParser} = require('sax-wasm');
-var {readFileSync} = require('fs');
 
 
 async function test_saxwasm_full() {
@@ -260,8 +263,8 @@ function test_ltx() {
 
     var parser = new LtxSaxParser();
 
-    parser.on('startElement', function (name, attrs) {countNodes += 1})
-    parser.on('endElement', function (name) {})
+    parser.on('startElement', function (name, attrs) {countNodes += 1});
+    parser.on('endElement', function (name) {});
     parser.on('text', function (text) {countText += 1});
 
     return {
@@ -271,6 +274,31 @@ function test_ltx() {
         },
         end: function() {
             parser.end();
+            return {countNodes, countText};
+        },
+    };
+};
+
+function test_saxes() {
+    var {SaxesParser} = require('saxes');
+
+    var countNodes = 0;
+    var countText = 0;
+
+    var parser = new SaxesParser({xmlns: false});
+
+    parser.on('opentag', function (name, attrs) {countNodes += 1})
+    parser.on('closetag', function (name) {})
+    parser.on('text', function (text) {countText += 1});
+    parser.on('attribute', function (atts) {});
+
+    return {
+        name: 'saxes',
+        write: function(data) {
+            parser.write(data)
+        },
+        end: function() {
+            parser.close();
             return {countNodes, countText};
         },
     };
