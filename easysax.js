@@ -1,5 +1,3 @@
-'use strict';
-
 /*
 new function() {
     var parser = new EasySAXParser();
@@ -52,16 +50,16 @@ module.exports = EasySAXParser;
 
 
 var stringFromCharCode = String.fromCharCode;
-var objectCreate = Object.create;
-function NULL_FUNC() {};
 
+function NULL_FUNC() {};
+function trim(s) {return s.trim()};
 
 function entity2char(x) {
     if (x === 'amp') {
         return '&';
     };
 
-    switch(x.toLocaleLowerCase()) {
+    switch(x.toLowerCase()) {
         case 'quot': return '"';
         case 'amp': return '&'
         case 'lt': return '<'
@@ -113,7 +111,7 @@ function xmlEntityDecode(s) {
 };
 
 function cloneMatrixNS(nsmatrix) {
-    var nn = objectCreate(null);
+    var nn = {};
     for (var n in nsmatrix) {
         nn[n] = nsmatrix[n];
     };
@@ -131,26 +129,27 @@ function EasySAXParser(config) {
     var is_onComment = false, is_onQuestion = false, is_onAttention = false, is_onUnknownNS = false;
 
     var isAutoEntity = true; // делать "EntityDecode" всегда
-    var indexStartXML; // позиция на которой закончен разбор xml
+    var indexStartXML = 0; // позиция на которой закончен разбор xml
     var entityDecode = xmlEntityDecode;
     var isNamespace = false;
-    var returnError;
-    var isParseStop; // прервать парсер
-    var defaultNS;
+    var returnError = '';
+    var isParseStop = false; // прервать парсер
+    var defaultNS = '';
     var nsmatrix = null;
-    var useNS;
+    var useNS = null;
     var init = false;
-    var xml; // string
+    var xml_length = 0;
+    var xml = ''; // string
 
-    var stringNodePosStart; // number. для получения исходной строки узла
-    var stringNodePosEnd; // number. для получения исходной строки узла
-    var attrStartPos; // number начало позиции атрибутов в строке attrString <(div^ class="xxxx" title="sssss")/>
-    var attrString; // строка атрибутов <(div class="xxxx" title="sssss")/>
-    var attrRes; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
+    var stringNodePosStart = 0; // number. для получения исходной строки узла
+    var stringNodePosEnd = 0; // number. для получения исходной строки узла
+    var attrStartPos = 0; // number начало позиции атрибутов в строке attrString <(div^ class="xxxx" title="sssss")/>
+    var attrString = ''; // строка атрибутов <(div class="xxxx" title="sssss")/>
+    var attrRes = ''; // закешированный результат разбора атрибутов , null - разбор не проводился, object - хеш атрибутов, true - нет атрибутов, false - невалидный xml
 
     function reset() {
         if (isNamespace) {
-            nsmatrix = objectCreate(null);
+            nsmatrix = {};
             nsmatrix.xmlns = defaultNS;
         };
 
@@ -229,6 +228,8 @@ function EasySAXParser(config) {
         };
 
         xml = xml ? xml + chunk : chunk;
+        xml_length = xml.length;
+
         parse();
 
         if (isParseStop && returnError) {
@@ -239,19 +240,17 @@ function EasySAXParser(config) {
         };
 
         if (indexStartXML > 0) {
-            xml = xml.substring(indexStartXML);
+            xml = indexStartXML >= xml_length ? '' : xml.slice(indexStartXML);
             indexStartXML = 0;
         };
-
-        return this;
     };
 
     this.end = function() {
         if (returnError) {
             onError(returnError);
-            returnError = '';
         };
 
+        returnError = '';
         attrString = '';
         init = false;
         xml = '';
@@ -272,43 +271,37 @@ function EasySAXParser(config) {
 
     // -----------------------------------------------------
 
-    var nodeParseAttrResult; // null - кеш пустой, true - атрибутов нет, {...} - карта атрибутов
+    var nodeParseAttrResult = null; // null - кеш пустой, true - атрибутов нет, {...} - карта атрибутов
     var nodeParseAttrSize = 0; // число элементов nodeParseAttrMap
     var nodeParseAttrMap = ['','','','','','','','','','']; // карта атрибутов. четные индексы "имя", не четные "значение"
     var nodeParseHasNS = false;
-    var nodeParseName; // имя ноды
+    var nodeParseName = ''; // имя ноды
 
     // разбор ноды <nodeName ...> или <nodeName .../>
     // на вход indexStart = xml.indexOf('<');
     // return xml.indexOf('>', ixNameStart);
     function parseNode(indexStart) {
-        var ixNameStart = +indexStart + 1; // позиция первого сивола имени
-        var ixNameEnd; // позиция последнего + 1 сивола имени
-        var attrName;
+        var ixNameStart = indexStart + 1; // позиция первого сивола имени
+        var ixNameEnd = 0; // позиция последнего + 1 сивола имени
+        var attrName = '';
+        var iE = 0;
+        var iR = 0;
 
         var i = ixNameStart;
-        var l = xml.length;
-        var w;
+        var w = 0;
 
-        var iE = xml.indexOf('>', ixNameStart);
-        var iR;
-
-        if (iE === -1) { // не полный xml. дальнейший парсинг бессмыслен
-            returnError = '#1901 invalid node'; // не полный xml
+        if (i >= xml_length) {
+            returnError = '#4952 invalid node'; // не полный xml
             return -1;
         };
 
         nodeParseAttrResult = null;
         nodeParseAttrSize = 0;
         nodeParseHasNS = false;
-        nodeParseName = '';
-
-        if (i >= l) {
-            returnError = '#4952 invalid node'; // не полный xml
-            return -1;
-        };
+        //nodeParseName = '';
 
         w = xml.charCodeAt(i);
+
         if (!(w > 96  && w < 123 || w > 64 && w < 91 || w === 95 || w === 58)) { // char 95"_" 58":"
             returnError = '#4940 first char <nodeName .../>';
             isParseStop = true; // дальнейший разбор невозможен
@@ -316,7 +309,7 @@ function EasySAXParser(config) {
         };
 
         while(true) {
-            if (++i >= l) {
+            if (++i >= xml_length) {
                 returnError = '#4950 invalid node'; // не полный xml
                 return -1; // errorParse
             };
@@ -328,12 +321,12 @@ function EasySAXParser(config) {
             };
 
             if (w === 32 || w === 9 || w === 10 || w === 11 || w === 12 || w === 13) { // \f\n\r\t\v пробел
-                nodeParseName = xml.substring(ixNameStart, ixNameEnd = i);
+                nodeParseName = xml.slice(ixNameStart, ixNameEnd = i);
                 break;
             };
 
             if (w === 62 /* ">" */) { // тег закрылся, атрибутов нет
-                nodeParseName = xml.substring(ixNameStart, ixNameEnd = i);
+                nodeParseName = xml.slice(ixNameStart, ixNameEnd = i);
                 return i;
             };
 
@@ -341,8 +334,8 @@ function EasySAXParser(config) {
                 ixNameEnd = i;
                 w = xml.charCodeAt(++i);
 
-                if (w === 62) {
-                    nodeParseName = xml.substring(ixNameStart, ixNameEnd);
+                if (w === 62 /* ">" */) {
+                    nodeParseName = xml.slice(ixNameStart, ixNameEnd);
                     return i;
                 };
                 returnError = '#0320 invalid node .../>?';
@@ -357,17 +350,23 @@ function EasySAXParser(config) {
 
         i += 1; // первый сивол пробел его пропускаем
 
-        while(true) {
+        iE = xml.indexOf('>', i);
+        if (iE === -1) { // не полный xml. дальнейший парсинг бессмыслен
+            returnError = '#1901 invalid node'; // не полный xml
+            return -1;
+        };
+
+        while (true) {
             iR = xml.indexOf('=', i);
 
             if (iR > iE || iR === -1) {
                 break;
             };
 
-            attrName = xml.substring(i, iR);
+            attrName = xml.slice(i, iR);
 
             if (isNamespace) {
-                attrName = attrName.trim();
+                attrName = trim(attrName);
                 if (attrName === 'xmlns' || (attrName.charCodeAt(0) === 120 && attrName.substr(0, 6) === 'xmlns:')) {
                     nodeParseHasNS = true;
                 };
@@ -381,7 +380,7 @@ function EasySAXParser(config) {
                 w = xml.charCodeAt(++iR);
             };
 
-            if (w === 34) {
+            if (w === 34) { // '"'
                 i = xml.indexOf('"', iR + 1);
             } else {
                 i = xml.indexOf('\'', iR + 1);
@@ -392,7 +391,7 @@ function EasySAXParser(config) {
                 return -1;
             };
 
-            nodeParseAttrMap[nodeParseAttrSize++] = xml.substring(iR + 1, i); // значение атрибута
+            nodeParseAttrMap[nodeParseAttrSize++] = xml.slice(iR + 1, i); // значение атрибута
             i += 1;
 
             if (i === iE) {
@@ -410,18 +409,20 @@ function EasySAXParser(config) {
             if (iE - i < 4) {
                 break;
             };
+
+            i += 1; // первый сивол пробел его пропускаем
         };
 
         return iE;
     };
 
     function upNSMATRIX() {
-        var hasNewMatrix;
-        var newalias;
-        var alias;
-        var value;
-        var name;
-        var j;
+        var hasNewMatrix = false;
+        var newalias = '';
+        var alias = '';
+        var value = '';
+        var name = '';
+        var j = 0;
 
         if (!nodeParseAttrSize) {
             return;
@@ -441,7 +442,6 @@ function EasySAXParser(config) {
 
 
             value = nodeParseAttrMap[j + 1];
-            //alias = useNS[isAutoEntity ? value : entityDecode(value)];
             alias = useNS[entityDecode(value)];
 
             if (is_onUnknownNS && !alias) {
@@ -479,16 +479,16 @@ function EasySAXParser(config) {
             return nodeParseAttrResult = true;
         };
 
-        var xmlnsAlias;
-        var nsName;
-        var iQ;
+        var xmlnsAlias = '';
+        var nsName = '';
+        var iQ = 0;
 
-        var attrs = objectCreate(null);
-        var value;
-        var prefx;
-        var name;
-        var has;
-        var j;
+        var attrs = {};
+        var value = '';
+        var prefx = '';
+        var name = '';
+        var has = false;
+        var j = 0;
 
 
         if (isNamespace) {
@@ -496,13 +496,13 @@ function EasySAXParser(config) {
         };
 
         for (j = 0; j < nodeParseAttrSize; j++) {
-            name = isNamespace ? nodeParseAttrMap[j] : nodeParseAttrMap[j].trim();
+            name = isNamespace ? nodeParseAttrMap[j] : trim(nodeParseAttrMap[j]);
             j += 1;
 
             if (isNamespace) {
                 iQ = name.indexOf(':');
                 if (iQ !== -1) {
-                    prefx = name.substring(0, iQ);
+                    prefx = name.slice(0, iQ);
                     if (prefx === 'xmlns') {
                         continue;
                     };
@@ -527,11 +527,11 @@ function EasySAXParser(config) {
             has = true;
         };
 
-        return nodeParseAttrResult = has ? attrs : true;
+        return nodeParseAttrResult = !has || attrs;
     };
 
     function getStringNode() { // вернет исходную строку узла
-        return xml.substring(stringNodePosStart, stringNodePosEnd);
+        return xml.slice(stringNodePosStart, stringNodePosEnd);
     };
 
 
@@ -544,21 +544,21 @@ function EasySAXParser(config) {
         // разбор идет по элементам (тег, текст cdata, ...).
         // элемент должен быть целиком в памяти
 
-        var _nsmatrix;
+        var _nsmatrix = null;
         var isTagStart = false;
         var isTagEnd = false;
-        //var nodeBody;
-        var stopEmit; // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
-        var nodeName;
-        var xmlns;
-        var iD;
-        var iQ;
-        var w;
-        var i; // number
+        var stopEmit = false; // используется при разборе "namespace" . если встретился неизвестное пространство то события не генерируются
+        var nodeName = '';
+        var xmlns = '';
+        var iU = 0;
+        var iD = 0;
+        var iQ = 0;
+        var w = 0;
+        var i = 0; // number
 
-        returnError = null; // сброс ошибки неудачного разбора
+        returnError = ''; // сброс ошибки неудачного разбора
 
-        while(indexStartXML !== -1) {
+        while(indexStartXML < xml_length) {
             stopEmit = stopIndexNS > 0;
 
             // поиск начала тега
@@ -566,39 +566,40 @@ function EasySAXParser(config) {
                 i = indexStartXML;
             } else {
                 i = xml.indexOf('<', indexStartXML);
-            };
-
-            if (i === -1) { // узел не найден. повторим попытку на след. write
-                if (parseStackNodes.length) {
-                    returnError = 'unexpected end parse';
+                if (i === -1) { // узел не найден. повторим попытку на след. write
+                    if (parseStackNodes.length) {
+                        returnError = 'unexpected end parse';
+                        return;
+                    };
                     return;
                 };
-
-                // --- нужно подумать как обрабатывать начало файла ---
-                // if (indexStartXML === 0) { // разбор еше не начат. возможно это начало файла. мусор до первого тега игнор
-                //     returnError = 'missing first tag';
-                //     return;
-                // };
-
-                return;
-            };
-
-            if (indexStartXML !== i && !stopEmit) { // все что до тега это текст
-                let text = xml.substring(indexStartXML, i);
-                indexStartXML = i; // до этой позиции разбор завершен
-
-                onTextNode(isAutoEntity ? entityDecode(text) : text);
-                if (isParseStop) {
-                    return;
+                if (indexStartXML !== i) { // все что до тега это текст
+                    if (!stopEmit) {
+                        onTextNode(isAutoEntity ? entityDecode(xml.slice(indexStartXML, i)) : xml.slice(indexStartXML, i));
+                        if (isParseStop) {
+                            return;
+                        };
+                    };
+                    indexStartXML = i; // до этой позиции разбор завершен
                 };
             };
+
 
             // ELEMENT
             // ---------------------------------------------
 
+            if (i + 2 >= xml_length) {
+                returnError = '#0318 invalid node'; // не полный xml
+                return -1;
+            };
+
             w = xml.charCodeAt(i + 1);
 
             if (w === 33) { // 33 == "!"
+                if (i + 4 >= xml_length) {
+                    returnError = '#0319 invalid node'; // не полный xml
+                    return -1;
+                };
                 w = xml.charCodeAt(i + 2);
 
                 // CDATA
@@ -614,7 +615,7 @@ function EasySAXParser(config) {
                     indexStartXML = indexEndCDATA + 3;
 
                     if (!stopEmit) {
-                        onCDATA(xml.substring(indexStartCDATA, indexEndCDATA));
+                        onCDATA(xml.slice(indexStartCDATA, indexEndCDATA));
                         if (isParseStop) {
                             return;
                         };
@@ -636,7 +637,7 @@ function EasySAXParser(config) {
                     indexStartXML = indexEndComment + 3;
 
                     if (is_onComment && !stopEmit) {
-                        let commentText = xml.substring(indexStartComment, indexEndComment);
+                        let commentText = xml.slice(indexStartComment, indexEndComment);
                         onComment(isAutoEntity ? entityDecode(commentText) : commentText);
                         if (isParseStop) {
                             return;
@@ -658,7 +659,7 @@ function EasySAXParser(config) {
                     indexStartXML = indexEndAttention + 1;
 
                     if (is_onAttention && !stopEmit) {
-                        onAttention(xml.substring(i, indexStartXML)); // весь тег, так как не придумал api
+                        onAttention(xml.slice(i, indexStartXML)); // весь тег, так как не придумал api
                         if (isParseStop) {
                             return;
                         };
@@ -680,7 +681,7 @@ function EasySAXParser(config) {
                 indexStartXML = indexEndQuestion + 2;
 
                 if (is_onQuestion) {
-                    onQuestion(xml.substring(i, indexStartXML)); // весь тег, так как не придумал api
+                    onQuestion(xml.slice(i, indexStartXML)); // весь тег, так как не придумал api
                     if (isParseStop) {
                         return;
                     };
@@ -693,15 +694,6 @@ function EasySAXParser(config) {
             // ---------------------------------------------
 
             if (w === 47) { // </...
-                let indexEndNode = xml.indexOf('>', i + 1);
-                if (indexEndNode === -1) { // error  ...> // не нашел знак закрытия тега
-                    returnError = 'unclosed tag'; // повторим попытку на след. write
-                    return;
-                };
-
-                isTagStart = false;
-                isTagEnd = true;
-
                 // проверяем что тег должен быть закрыт тот-же что и открывался
                 if (!parseStackNodes.length) {
                     returnError = 'close tag, requires open tag';
@@ -712,25 +704,34 @@ function EasySAXParser(config) {
                 nodeName = parseStackNodes.pop();
                 iQ = i + 2 + nodeName.length;
 
-                if (nodeName !== xml.substring(i + 2, iQ)) {
-                    returnError = 'close tag, not equal to the open tag';
-                    isParseStop = true; // дальнейший разбор невозможен
-                    return;
-                };
-
-                // проверим что в закрываюшем теге нет лишнего
-                for(; iQ < indexEndNode; iQ++) {
-                    let w = xml.charCodeAt(iQ);
+                while(true) { // проверим что в закрываюшем теге нет лишнего
+                    w = xml.charCodeAt(iQ);
+                    if (w === 62) { // ">"
+                        indexStartXML = iQ + 1;
+                        break;
+                    };
                     if (w === 32 || w === 9 || w === 10 || w === 11 || w === 12 || w === 13) { // \f\n\r\t\v
+                        iQ += 1;
                         continue;
                     };
-
+                    if (!w) {
+                        parseStackNodes.push(nodeName);
+                        returnError = 'unclosed tag'; // повторим попытку на след. write
+                        return;
+                    };
                     returnError = 'close tag, unallowable char';
                     isParseStop = true; // дальнейший разбор невозможен
                     return;
                 };
 
-                indexStartXML = indexEndNode + 1;
+                if (nodeName !== xml.substr(i + 2, nodeName.length)) {
+                    returnError = 'close tag, not equal to the open tag';
+                    isParseStop = true; // дальнейший разбор невозможен
+                    return;
+                };
+
+                isTagStart = false;
+                isTagEnd = true;
 
             } else {
                 let indexEndNode = parseNode(i);
@@ -778,7 +779,7 @@ function EasySAXParser(config) {
 
                 iD = nodeName.indexOf(':');
                 if (iD !== -1) {
-                    xmlns = nsmatrix[nodeName.substring(0, iD)];
+                    xmlns = nsmatrix[nodeName.slice(0, iD)];
                     nodeName = nodeName.substr(iD + 1);
 
                 } else {
