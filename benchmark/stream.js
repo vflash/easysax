@@ -1,40 +1,79 @@
-var {SaxEventType, SAXParser} = require('sax-wasm');
+var SaxEventType, SAXParser; // sax-wasm - опциональная зависимость, нужна только для закомментированных тестов
+try {
+    ({SaxEventType, SAXParser} = require('sax-wasm'));
+} catch (e) {};
+
+var EasySax = require('../easysax.js');
+
 var {readFileSync} = require('fs');
 var {performance} = require('perf_hooks');
 var {Readable} = require('stream');
 var fs = require('fs');
 
 var FILE_NAME = null;
+var LIMIT_MB = 0;
 var SIZE_MB = 500;
+var MOCK_TYPE = 'mock'; // тип генератора мока: mock | catalog
+var MOCK_TYPES = ['mock', 'catalog'];
 
 process.argv.forEach((cmd, index, list) => {
     if (cmd === '-file' && list[index + 1]) {
         FILE_NAME = list[index + 1];
     };
+    if (cmd === '-limit' && list[index + 1]) {
+        LIMIT_MB = list[index + 1];
+    };
     if (cmd === '-size' && list[index + 1]) {
         SIZE_MB = list[index + 1];
     };
+    if (cmd === '-type' && list[index + 1]) {
+        MOCK_TYPE = list[index + 1];
+    };
 });
+
+if (MOCK_TYPES.indexOf(MOCK_TYPE) === -1) {
+    console.error('unknown -type: ' + MOCK_TYPE + ' (available: ' + MOCK_TYPES.join(', ') + ')');
+    process.exit(1);
+};
 
 
 console.log(str('file: ' + FILE_NAME, 71) + ' elems    text');
 console.log("-".repeat(90));
 
-var EasySax = require('../easysax.js');
+if (require.main === module) {
+    (async function() {
+        await test(test_empty);
 
-(async function go() {
-    await test(test_empty);
-    await test(test_EasySax_on_on_on);
-    await test(test_EasySax_off_on_on);
-    await test(test_EasySax_off_off_on);
-    await test(test_EasySax_off_off_off);
-    await test(test_saxes);
-    await test(test_ltx);
+        await test(test_EasySax_on_on_on);
+        await test(test_EasySax_off_on_on);
+        await test(test_EasySax_off_off_on);
+        await test(test_EasySax_off_off_off);
 
-    //await test(test_saxwasm_zero);
-    //await test(test_saxwasm_full);
-    //await test(test_saxwasm);
-})();
+        console.log(' ');
+
+        await tryTest(test_eksml, 'eksml');
+        await tryTest(test_ltx, 'ltx');
+        await tryTest(test_saxes, 'saxes');
+        //await test(test_saxwasm_zero);
+        //await test(test_saxwasm_full);
+        //await test(test_saxwasm);
+
+        console.log('-'.repeat(90));
+    })();
+};
+
+
+
+// тест с опциональной зависимостью: модуль не установлен - строка пропускается
+async function tryTest(testFn, name) {
+    try {
+        await test(testFn);
+    } catch (e) {
+        var msg = String(e && e.message || e).split('\n')[0];
+        console.log(str(name + ' - skip: ' + msg, 71));
+    };
+};
+
 
 
 function formatBytes(bytes) {
@@ -48,6 +87,7 @@ function formatBytes(bytes) {
 };
 
 function nullFunc() {};
+function pause(ms) {return new Promise(resolve => setTimeout(resolve, ms))};
 function str(value, len) {
     return ((value ?? '') + " ".repeat(100)).slice(0, len);
 };
@@ -67,7 +107,7 @@ async function test(test) {
 
         var rstream = (FILE_NAME && log
             ? fs.createReadStream(FILE_NAME, config.utf !== false ? 'utf8' : null)
-            : createMockXmlStream(log ? SIZE_MB : 20, config.utf !== false)
+            : createMockStream(MOCK_TYPE, log ? SIZE_MB : 20, config.utf !== false)
         );
 
         var onchunk = (chunk) => {
@@ -75,6 +115,11 @@ async function test(test) {
             config_write(chunk);
             time += performance.now() - xt;
             size += chunk.length;
+
+            if (LIMIT_MB && size >= LIMIT_MB * 1024 * 1024) {
+                rstream.destroy();
+                onend();
+            };
         };
         var onend = () => {
             var xt = performance.now();
@@ -102,6 +147,8 @@ async function test(test) {
     var z = 5; while(z--) {
         await run(false);
     };
+
+    await pause(100);
     await run(true);
 };
 
@@ -124,7 +171,8 @@ function createMockXmlStream(sizeInMb = 1000, isUtf8 = true) {
         let i = 0;
         while (totalSent < TARGET_SIZE_BYTES) {
             // Генерируем повторяющийся блок
-            const item = `  <item id="${i++}" v="&quot;big&quot;"><payload type="string">${repeat_x}</payload><hr/></item>\n`;
+            const item = `  <item id="${i++}" size="&quot;big&quot;"><payload type="string">${repeat_x}</payload><hr/></item>\n`;
+            //const item = `  <item id="${i++}"><payload>${repeat_x}</payload></item>\n`;
             buffer += item;
 
             // Как только накопили 64 КБ или больше — отдаем чанк в поток
@@ -148,6 +196,114 @@ function createMockXmlStream(sizeInMb = 1000, isUtf8 = true) {
     };
 
     return stream;
+};
+
+
+// << ------------------------------------------------------------------------ >>
+// catalog mock: детерминированный генератор "каталога товаров".
+// Циклические шаблоны (status, имя, версия, uuid, tags) совпадают с эталонным
+// примером байт в байт. Никакого Math.random - одинаковый поток при каждом запуске.
+// --------------------------------------------------------------------------
+
+const CATALOG_ADJ = ['Быстрый', 'Мощный', 'Умный', 'Красивый'];          // имя, цикл 4
+const CATALOG_DEVICES = ['движок', 'процессор', 'контроллер', 'модуль']; // имя и category, цикл 4
+const CATALOG_STATUS = ['inactive', 'pending', 'deployed', 'testing', 'active'];    // цикл 5
+const CATALOG_TAG_ADJ = ['умный', 'компактный', 'быстрый', 'красивый'];  // первый tag, цикл 4
+const CATALOG_TAG_STATUS = ['pending', 'testing', 'inactive', 'deployed', 'active']; // второй tag, цикл 5
+const CATALOG_UUID_BASE = '741eb852fc9630da'; // база uuid: ротация на 3*i hex-символов, дубль 2 раза
+
+
+function catalogHash(i, salt) { // детерминированный хеш ( murmur3 finalizer )
+    var h = (i ^ Math.imul(salt, 0x9e3779b1)) >>> 0;
+    h = Math.imul(h ^ (h >>> 15), 0x85ebca6b) >>> 0;
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35) >>> 0;
+    h ^= h >>> 16;
+    return h >>> 0;
+};
+
+
+function catalogItem(i) { // один <item> с \n в конце, i - с нуля
+    const id = i + 1;
+    const adj = CATALOG_ADJ[i % 4];
+    const device = CATALOG_DEVICES[i % 4];
+    const status = CATALOG_STATUS[i % 5];
+    const tag1 = CATALOG_TAG_ADJ[i % 4];
+    const tag2 = CATALOG_TAG_STATUS[i % 5];
+
+    const major = (id % 99) + 1; // версия: id 96 -> 97.7, id 98 -> 99.9, id 99 -> 1.1
+    const version = major + '.' + (major % 10);
+
+    const rot = (3 * i) % 16;
+    const core = CATALOG_UUID_BASE.slice(rot) + CATALOG_UUID_BASE.slice(0, rot);
+    const full = core + core;
+    const uuid = `${full.slice(0, 8)}-${full.slice(8, 12)}-${full.slice(12, 16)}-${full.slice(16, 20)}-${full.slice(20, 32)}`;
+
+    const price = (1000 + (catalogHash(i, 1) % 900000) / 100).toFixed(2); // 1000.00 - 9999.99
+    const stock = catalogHash(i, 2) % 5000; // 0 - 4999
+
+    return `  <item id="${id}" status="${status}">\n`
+        + `    <name>${adj} ${device} #${id}</name>\n`
+        + `    <description>${adj.toLowerCase()} ${device} для высокопроизводительных систем, версия ${version}. UUID: ${uuid}</description>\n`
+        + `    <price>${price}</price>\n`
+        + `    <stock>${stock}</stock>\n`
+        + `    <category>${device}</category>\n`
+        + `    <tags>\n`
+        + `      <tag>${tag1}</tag>\n`
+        + `      <tag>${tag2}</tag>\n`
+        + `    </tags>\n`
+        + `  </item>\n`;
+};
+
+
+/**
+ * Создает мок-поток (Readable) в формате каталога товаров заданного объема.
+ * Содержимое полностью детерминировано: при каждом запуске байт в байт одинаковое.
+ */
+function createMockCatalogStream(sizeInMb = 1000, isUtf8 = true) {
+    const TARGET_SIZE_BYTES = sizeInMb * 1024 * 1024;
+    const CHUNK_SIZE = 64 * 1024; // 64 КБ
+
+    const stream = Readable.from((async function* () {
+        let totalSent = 0;
+        let buffer = '<?xml version="1.0" encoding="UTF-8"?>\n<catalog>\n';
+
+        let i = 0;
+        while (totalSent < TARGET_SIZE_BYTES) {
+            buffer += catalogItem(i);
+            i += 1;
+
+            // Как только накопили 64 КБ или больше — отдаем чанк в поток
+            if (buffer.length >= CHUNK_SIZE) {
+                yield buffer;
+                totalSent += buffer.length;
+                buffer = '';
+            }
+
+            // Оставляем запас под закрывающий тег в конце
+            if (totalSent + buffer.length > TARGET_SIZE_BYTES - 20) {
+                break;
+            }
+        }
+
+        yield buffer + '</catalog>';
+    })());
+
+    if (isUtf8) {
+        stream.setEncoding('utf8');
+    };
+
+    return stream;
+};
+
+
+// реестр типов моков: имя -> генератор потока
+var MOCK_STREAMS = {
+    mock: createMockXmlStream,
+    catalog: createMockCatalogStream,
+};
+
+function createMockStream(type, sizeInMb, isUtf8) { // диспетчер по -type
+    return MOCK_STREAMS[type](sizeInMb, isUtf8);
 };
 
 async function test_empty() {
@@ -263,12 +419,14 @@ function test_ltx() {
 
     var parser = new LtxSaxParser();
 
+    // усеченный поток (-limit): не даем ошибкам закрытия документа убить бенчмарк
+    parser.on('error', function (e) {});
     parser.on('startElement', function (name, attrs) {countNodes += 1});
     parser.on('endElement', function (name) {});
     parser.on('text', function (text) {countText += 1});
 
     return {
-        name: 'ltx',
+        name: 'ltx            uq=on  attr=on',
         write: function(data) {
             parser.write(data)
         },
@@ -287,13 +445,15 @@ function test_saxes() {
 
     var parser = new SaxesParser({xmlns: false});
 
+    // без слушателя error saxes бросает исключение на parser.close() усеченного документа (-limit)
+    parser.on('error', function (e) {})
     parser.on('opentag', function (name, attrs) {countNodes += 1})
     parser.on('closetag', function (name) {})
     parser.on('text', function (text) {countText += 1});
     parser.on('attribute', function (atts) {});
 
     return {
-        name: 'saxes',
+        name: 'saxes          uq=on  attr=on',
         write: function(data) {
             parser.write(data)
         },
@@ -304,6 +464,31 @@ function test_saxes() {
     };
 };
 
+
+function test_eksml() {
+    var eksmlSaxParser = require('./eksml.js').default;
+
+    var countNodes = 0;
+    var countText = 0;
+
+    const parser = eksmlSaxParser();
+
+    parser.on('openTag', function (name, attrs) {countNodes += 1})
+    parser.on('closeTag', function (name) {})
+    parser.on('text', function (text) {countText += 1;});
+
+    return {
+        name: 'eksml          uq=off attr=on',
+        write: function(data) {
+            parser.write(data)
+        },
+        end: function() {
+            parser.close();
+            return {countNodes, countText};
+        },
+    };
+
+};
 
 function test_EasySax_on_on_on() {
     var countNodes = 0;
@@ -353,16 +538,15 @@ function test_EasySax_off_on_on() {
 
     var parser = new EasySax({
         autoEntity: true,
+        defaultNS: null,
+        ns: null,
         on: {
             startNode: function (elem, attr) {
                 countNodes += 1;
                 attr();
-
             },
             endNode: nullFunc,
-            text: function(text) {
-                countText += 1;
-            },
+            text: function(text) {countText += 1},
         },
     });
 
@@ -382,6 +566,8 @@ function test_EasySax_off_off_on() {
 
     var parser = new EasySax({
         autoEntity: false,
+        defaultNS: null,
+        ns: null,
         on: {
             startNode: function(name, attr) {
                 countNodes += 1;
@@ -410,12 +596,12 @@ function test_EasySax_off_off_off() {
 
     var parser = new EasySax({
         autoEntity: false,
+        defaultNS: null,
+        ns: null,
         on: {
             startNode: function() {countNodes += 1},
             endNode: nullFunc,
-            text: function(text) {
-                countText += 1;
-            },
+            text: function(text) {countText += 1},
         },
     });
 
@@ -427,4 +613,10 @@ function test_EasySax_off_off_off() {
             return {countNodes, countText};
         },
     };
+};
+
+
+module.exports = {
+    createMockXmlStream,
+    createMockCatalogStream,
 };

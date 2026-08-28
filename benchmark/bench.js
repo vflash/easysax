@@ -6,41 +6,6 @@ var only;
 var xml;
 
 
-// _ltx('<root aa  aa = "dd>d<d"  qqq = "adfadf"/>');
-
-function _ltx(xml) {
-    var LtxSaxParser = require('ltx/lib/parsers/ltx.js');
-
-    // (function() {
-    //     var parser = new LtxSaxParser();
-    //
-    //     parser.on('startElement', function() {
-    //         console.log(arguments);
-    //     })
-    //     parser.on('endElement', nullfunc)
-    //     parser.on('text', nullfunc);
-    //
-    //     parser.end(xml);
-    // })();
-
-    (function() {
-        var parser = new EasySax({
-            autoEntity: true,
-            on: {
-                startNode: function(name, attr) {
-                    // console.log(name, attr());
-                },
-                endNode: nullfunc,
-                text: nullfunc,
-            },
-        });
-
-        parser.parse(xml);
-    })();
-
-};
-
-
 async function banch(_xml, _count, _only) {
 
     //var only = /^easysax ns=off uq=on attr=on/;
@@ -58,49 +23,52 @@ async function banch(_xml, _count, _only) {
     console.log('');
     console.log('count - ' + count);
     console.log('size - ' + _xml.length);
-    console.log('-------------------------------------------');
+    console.log('----------------------------------------------');
+
 
 
     var list = [
-        test_ltx,
-        test_saxophone,
-        // test_saxwasm,
-        '---',
-
+        /* Due to differences in launch configurations, only the results of the first test with EasySax are reliable */
         test_EasySax_on_on_on,
         test_EasySax_off_on_on,
         test_EasySax_off_off_on,
         test_EasySax_off_off_off,
 
-        // test_sax,
-        // test_libxmljs,
-        // test_nodeExpat_string,
+        ' ',
+        test_eksml,
+        test_saxen,
+        test_saxophone,
+        test_ltx,
+        test_saxes,
+        test_sax,
+        test_libxmljs,
+        test_nodeExpat_string,
         // test_nodeExpat_Buffer,
+        test_saxwasm,
+        test_tuananhSax,
     ];
 
 
     var fn;
     while(fn = list.shift()) {
-        if (fn === '---') {
-                console.log('---');
+        await pause(50);
+
+        if (typeof fn === 'string') {
+            console.log(fn);
         } else {
             await fn(_xml);
         };
     };
 
-    console.log('-------------------------------------------');
+    console.log('----------------------------------------------');
 
 };
 
 function nullfunc() {};
+function pause(ms) {new Promise(resolve => setTimeout(resolve, ms))};
+function ss(value, len) {return (value + '                                           ').slice(0, len)};
 
-function test(name, test) {
-    'use strict';
-
-    // if (only && !only.test(name.trim())) {
-    //     return;
-    // };
-
+async function test(name, test) {
     if (count > 50) {
         for(var z = 20; z--;) {
             test();
@@ -109,13 +77,16 @@ function test(name, test) {
         test();
     };
 
+    await pause(50);
 
-
-    console.time(name);
-    for(var z = count; z--;) {
+    var tA = performance.now()
+    for (var z = count; z--;) {
         test();
     };
-    console.timeEnd(name);
+    var tB = performance.now()
+    let tx = x => ss(x.toFixed(x < 1000 ? 2 : 1), 7);
+
+    console.log(name + ' : ' + tx(tB - tA) + ' ms');
 };
 
 
@@ -135,7 +106,7 @@ function test_charCodeAt() {
 };
 
 function test_stringIndexOf(xml) {
-    test('stringIndexOf', function() {
+    test('stringIndexOf                    ', function() {
         var j = xml.indexOf('>');
         var m = [];
 
@@ -157,7 +128,7 @@ function test_sax(xml) {
     var saxjs = require('sax');
     var parser = saxjs.parser(false);
 
-    test('saxjs ', function() {
+    test('saxjs             uq=on  attr=on ', function() {
         parser.write(xml).close();
     });
 };
@@ -168,7 +139,8 @@ async function test_saxwasm(xml) {
 
     const wasmUrl = require.resolve('sax-wasm/lib/sax-wasm.wasm');
     const saxWasm = readFileSync(wasmUrl);
-    const parser = new SAXParser(SaxEventType.Cdata | SaxEventType.OpenTag);
+    const eventsType = SaxEventType.OpenTagStart | SaxEventType.CloseTag | SaxEventType.OpenTag | SaxEventType.Attribute | SaxEventType.Text;
+    const parser = new SAXParser(eventsType);
     await parser.prepareWasm(saxWasm);
 
     async function parseXML(xmlString) {
@@ -184,16 +156,12 @@ async function test_saxwasm(xml) {
         parser.end();
     }
 
-    test('saxwasm', async function() {
+    test('saxwasm~' + ss(eventsType, 25), async function() {
         await parseXML(xml).catch(err => {
           console.error('Ошибка:', err);
         });
     });
 };
-
-
-
-
 
 function test_libxmljs(xml) {
     var libxml = require("libxmljs");
@@ -203,7 +171,7 @@ function test_libxmljs(xml) {
     };
 
     try {
-        test('libxml', go);
+        test('libxml                           ', go);
     } catch(e) {
         console.log('libxml: error');
     };
@@ -213,7 +181,7 @@ function test_nodeExpat_string(xml) {
     var Expat = require('node-expat'), parser;
     function nullfunc() {};
 
-    test('expat ', function() {
+    test('expat                            ', function() {
         parser = new Expat.Parser('utf-8');
 
         parser.addListener('startElement', nullfunc);
@@ -239,20 +207,16 @@ function test_nodeExpat_Buffer(xml) {
 };
 
 function test_saxophone(xml) {
-    var Saxophone = require('saxophone');
+    var Saxophone = require('saxophone'); // bad
 
-    test('saxophone  ns=off uq=on  attr=on', function() {
+    test('saxophone         uq=off attr=on ', function() {
         var parser = new Saxophone();
 
-        parser.on('tagopen', function(tag) {
-                Saxophone.parseAttrs(tag.attrs);
-        });
+        parser.on('tagopen', function(tag) {});
         parser.on('tagclose', nullfunc)
-        parser.on('text', function(op) {
-                Saxophone.parseEntities(op.contents)
-        });
+        parser.on('text', function(op) {});
 
-        parser.end(xml);
+        parser.parse(xml);
     });
 };
 
@@ -261,23 +225,38 @@ function test_ltx(xml) {
     var LtxSaxParser = require('ltx/lib/parsers/ltx.js');
     var countNodes = 0;
 
-    test('ltx', function() {
+    test('ltx               uq=on  attr=on ', function() {
         var parser = new LtxSaxParser();
 
-        parser.on('startElement', function() {
+        parser.on('startElement', function(name, attrs) {
             countNodes += 1;
         })
         parser.on('endElement', nullfunc)
         parser.on('text', nullfunc);
 
         parser.end(xml);
-
     });
+};
 
+function test_saxes(xml) {
+    var {SaxesParser} = require('saxes');
+
+    test('saxes             uq=on  attr=on ', function() {
+        var countNodes = 0;
+        var parser = new SaxesParser({xmlns: false});
+
+        parser.on('opentag', function (name, attrs) {countNodes += 1})
+        parser.on('closetag', function (name) {})
+        parser.on('text', function (text) {});
+
+        parser.write(xml);
+        parser.close();
+    });
 };
 
 function test_EasySax_on_on_on(xml) {
     var entityDecode = EasySax.entityDecode
+    var countNodes = 0;
     var mapNS = {
         'http://www.w3.org/1999/xhtml': 'xhtml',
         'http://purl.org/rss/1.0/': 'rss',
@@ -287,17 +266,13 @@ function test_EasySax_on_on_on(xml) {
         'http://schemas.google.com/g/2005': 'gd',
     };
 
-    function startNode(elem, attr, isTagEnd, getStrNode) {
-        attr();
-    };
-
-    test('easysax ns=on  uq=on  attr=on ', function() {
+    test('easysax    ns=on  uq=on  attr=on ', function() {
         var parser = new EasySax({
             autoEntity: true,
             defaultNS: 'rss',
             ns: mapNS,
             on: {
-                startNode: startNode,
+                startNode: function(tag, attr) {attr();countNodes += 1},
                 endNode: nullfunc,
                 text: nullfunc,
             },
@@ -308,16 +283,15 @@ function test_EasySax_on_on_on(xml) {
 };
 
 function test_EasySax_off_on_on(xml) {
-    var entityDecode = EasySax.entityDecode
-    function startNode(elem, attr) {
-        attr();
-    };
+    var countNodes = 0;
 
-    test('easysax ns=off uq=on  attr=on ', function() {
+    test('easysax    ns=off uq=on  attr=on ', function() {
         var parser = new EasySax({
             autoEntity: true,
+            defaultNS: null,
+            ns: null,
             on: {
-                startNode: startNode,
+                startNode: function(tag, attr) {attr();countNodes += 1},
                 endNode: nullfunc,
                 text: nullfunc,
             },
@@ -329,16 +303,15 @@ function test_EasySax_off_on_on(xml) {
 };
 
 function test_EasySax_off_off_on(xml) {
-    var entityDecode = EasySax.entityDecode
-    function startNode(elem, attr) {
-        attr();
-    };
+    var countNodes = 0;
 
-    test('easysax ns=off uq=off attr=on ', function() {
+    test('easysax    ns=off uq=off attr=on ', function() {
         var parser = new EasySax({
             autoEntity: false,
+            defaultNS: null,
+            ns: null,
             on: {
-                startNode: startNode,
+                startNode: function(tag, attr) {attr();countNodes += 1},
                 endNode: nullfunc,
                 text: nullfunc,
             },
@@ -346,15 +319,16 @@ function test_EasySax_off_off_on(xml) {
 
         parser.parse(xml);
     });
-
 };
 
 function test_EasySax_off_off_off(xml) {
     var countNodes = 0;
 
-    test('easysax ns=off uq=off attr=off', function() {
+    test('easysax    ns=off uq=off attr=off', function() {
         var parser = new EasySax({
             autoEntity: false,
+            defaultNS: null,
+            ns: null,
             on: {
                 startNode: function() {countNodes += 1},
                 endNode: nullfunc,
@@ -364,7 +338,61 @@ function test_EasySax_off_off_off(xml) {
 
         parser.parse(xml);
     });
-
-    console.log('countNodes:', countNodes);
 };
 
+
+function test_saxen(xml) {
+    var saxen = require('saxen');
+
+    test('saxen      ns=off uq=on  attr=on ', function() {
+        var parser = new saxen.Parser();
+        parser.on('openTag', function(elementName, attrGetter, decodeEntities) {
+            var attrs = attrGetter();
+            for (var i in attrs) {
+                decodeEntities(attrs[i]);
+            };
+        });
+        parser.on('closeTag', function() {})
+        parser.on('text', function() {});
+        parser.parse(xml);
+    });
+};
+
+
+function test_eksml(xml) {
+    var eksmlSaxParser = require('./eksml.js').default;
+
+    test('eksml             uq=off attr=on ', function() {
+        var countNodes = 0;
+        var countText = 0;
+        const parser = eksmlSaxParser();
+
+        parser.on('openTag', function (name, attrs) {
+            countNodes += 1;
+        })
+        parser.on('closeTag', function (name) {})
+        parser.on('text', function (text) {countText += 1;});
+
+        parser.write(xml);
+        parser.close();
+    });
+};
+
+
+function test_tuananhSax(xml) {
+    var SaxParser = require('@tuananh/sax-parser');
+
+    test('tuananh           uq=off attr=on ', function() {
+        var countNodes = 0;
+        var countText = 0;
+        const parser = new SaxParser();
+
+        parser.on('startElement', function (name, attrs) { // attrs no decode entities
+            countNodes += 1;
+        })
+        parser.on('endElement', function (name) {})
+        parser.on('text', function (text) {countText += 1;});
+
+        parser.parse(xml);
+    });
+};

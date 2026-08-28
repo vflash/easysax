@@ -19,83 +19,109 @@ $ npm install easysax
 Benchmark
 ---------------------------------------------------
 
-**sh: node benchmark/stream.js**
+**sh: bun benchmark/stream.js**
 ```
 file: mock                                                              elems    text
 ------------------------------------------------------------------------------------------
-only load                      - total: 91.13    time: 0.35     500 MB
-easysax ns=on  uq=on  attr=on  - total: 2238.40  time: 2151.18  500 MB 6254753  6254754
-easysax ns=off uq=on  attr=on  - total: 1840.96  time: 1755.02  500 MB 6254753  6254754
-easysax ns=off uq=off attr=on  - total: 1711.58  time: 1625.02  500 MB 6254753  6254754
-easysax ns=off uq=off attr=off - total: 1383.35  time: 1296.81  500 MB 6254753  6254754
-ltx                            - total: 2563.93  time: 2477.30  500 MB 6254753  6254753
-```
+only load                      - total: 169.28   time: 2.51     500 MB
 
-**sh: node benchmark/stream.js -file AS_HOUSES_PARAMS.XML**
-```
-file: ./AS_HOUSES_PARAMS.XML                                            elems    text
+easysax ns=on  uq=on  attr=on  - total: 3109.29  time: 2670.36  500 MB 7505704  5003804
+easysax ns=off uq=on  attr=on  - total: 2482.34  time: 2100.68  500 MB 7505704  5003804
+easysax ns=off uq=off attr=on  - total: 1369.77  time: 1066.33  500 MB 7505704  5003804
+easysax ns=off uq=off attr=off - total: 1237.50  time: 887.20   500 MB 7505704  5003804
+
+eksml          uq=off attr=on  - total: 1557.89  time: 1259.11  500 MB 7505704  2501901
+saxes          uq=on  attr=on  - total: 7909.32  time: 7439.90  500 MB 7505704  5003804
+ltx            uq=on  attr=on  - total: 14608.25 time: 14167.45 500 MB 7505704  5003803
 ------------------------------------------------------------------------------------------
-only load                      - total: 3777.53  time: 5.34     4.74 GB
-easysax ns=on  uq=on  attr=on  - total: 44596.10 time: 40821.88 4.74 GB 27997407 1
-easysax ns=off uq=on  attr=on  - total: 39105.67 time: 35382.78 4.74 GB 27997407 1
-easysax ns=off uq=off attr=on  - total: 36759.76 time: 32966.74 4.74 GB 27997407 1
-easysax ns=off uq=off attr=off - total: 20291.19 time: 16555.40 4.74 GB 27997407 1
-ltx                            - total: 57810.57 time: 54235.45 4.74 GB 27997407 1
+```
+
+**sh: bun benchmark/stream.js -file AS_HOUSES_PARAMS.XML**
+```
+file: ./AS_HOUSES_PARAMS.XML
+------------------------------------------------------------------------------------------
+only load                      - total: 29979.80 time: 29.69    4.74 GB
+
+easysax ns=on  uq=on  attr=on  - total: 53994.98 time: 21257.70 4.74 GB 27997407 1
+easysax ns=off uq=on  attr=on  - total: 50518.53 time: 17841.35 4.74 GB 27997407 1
+easysax ns=off uq=off attr=on  - total: 47360.99 time: 14886.36 4.74 GB 27997407 1
+easysax ns=off uq=off attr=off - total: 42390.00 time: 10174.52 4.74 GB 27997407 1
+
+eksml          uq=off attr=on  - total: 58463.19 time: 25675.42 4.74 GB 27997407 1
+ltx            uq=on  attr=on  - total: 89953.37 time: 56807.52 4.74 GB 27997407 1
+saxes          uq=on  attr=on  - total: 123178.7 time: 89020.67 4.74 GB 27997407 0
+------------------------------------------------------------------------------------------
 ```
 
 
-https://github.com/vflash/sax-benchmark
-
-**sh: node bench-01.js**
+**sh: node benchmark/bench-01.js**
 ```
 count - 100000
-size - 25
+size - 34
+----------------------------------------------
+easysax    ns=on  uq=on  attr=on  : 124.97  ms
+easysax    ns=off uq=on  attr=on  : 71.09   ms
+easysax    ns=off uq=off attr=on  : 67.30   ms
+easysax    ns=off uq=off attr=off : 52.92   ms
 
-easysax ns=on  entityDecode=on  getAttr=on : 100.050ms
-easysax ns=off entityDecode=on  getAttr=on : 82.520ms
-easysax ns=off entityDecode=off getAttr=on : 69.133ms
-easysax ns=off entityDecode=off getAttr=off: 29.226ms
-saxjs : 346.182ms
-libxml: 852.098ms
-expat : 705.867ms
-expat buffer: 712.212ms
-ltx: 137.998ms
+eksml             uq=off attr=on  : 111.99  ms
+saxen      ns=off uq=on  attr=on  : 94.97   ms
+saxophone         uq=off attr=on  : 69.96   ms
+ltx               uq=on  attr=on  : 88.91   ms
+saxes             uq=on  attr=on  : 174.89  ms
+saxjs             uq=on  attr=on  : 245.46  ms
+libxml                            : 1184.2  ms
+expat                             : 1102.1  ms
+saxwasm~481                       : 513.93  ms
+tuananh           uq=off attr=on  : 2778.8  ms
+----------------------------------------------
 ```
 
 **sh: node bench-02.js**
 ```
 count - 1000
-size - 22750
+size - 22736
+----------------------------------------------
+easysax    ns=on  uq=on  attr=on  : 104.48  ms
+easysax    ns=off uq=on  attr=on  : 75.82   ms
+easysax    ns=off uq=off attr=on  : 54.09   ms
+easysax    ns=off uq=off attr=off : 45.54   ms
 
-easysax ns=on  entityDecode=on  getAttr=on : 151.511ms
-easysax ns=off entityDecode=on  getAttr=on : 114.646ms
-easysax ns=off entityDecode=off getAttr=on : 88.604ms
-easysax ns=off entityDecode=off getAttr=off: 80.773ms
-saxjs : 1484.910ms
-libxml: 1058.808ms
-expat : 1028.151ms
-expat buffer: 853.925ms
-ltx: 359.173ms
+eksml             uq=off attr=on  : 68.54   ms
+saxen      ns=off uq=on  attr=on  : 67.67   ms
+saxophone         uq=off attr=on  : 83.87   ms
+ltx               uq=on  attr=on  : 130.20  ms
+saxes             uq=on  attr=on  : 157.29  ms
+saxjs             uq=on  attr=on  : 576.21  ms
+libxml                            : 1362.6  ms
+expat                             : 1174.6  ms
+saxwasm~481                       : 436.54  ms
+tuananh           uq=off attr=on  : 451.34  ms
+----------------------------------------------
 ```
 
 **sh: node bench-03.js**
 ```
 count - 1000
 size - 121786
+----------------------------------------------
+easysax    ns=on  uq=on  attr=on  : 691.52  ms
+easysax    ns=off uq=on  attr=on  : 489.07  ms
+easysax    ns=off uq=off attr=on  : 389.16  ms
+easysax    ns=off uq=off attr=off : 319.11  ms
 
-easysax ns=on  entityDecode=on  getAttr=on : 1769.676ms
-easysax ns=off entityDecode=on  getAttr=on : 1475.585ms
-easysax ns=off entityDecode=off getAttr=on : 1214.665ms
-easysax ns=off entityDecode=off getAttr=off: 405.799ms
-saxjs : 10765.309ms
-libxml: 5387.832ms
-expat : 6734.018ms
-expat buffer: 5865.209ms
-ltx: 2953.910ms
+eksml             uq=off attr=on  : 420.79  ms
+saxen      ns=off uq=on  attr=on  : 837.77  ms
+saxophone         uq=off attr=on  : 681.66  ms
+ltx               uq=on  attr=on  : 920.86  ms
+saxes             uq=on  attr=on  : 1155.2  ms
+saxjs             uq=on  attr=on  : 4305.0  ms
+libxml                            : 7069.5  ms
+expat                             : 7421.8  ms
+saxwasm~481                       : 3548.3  ms
+tuananh           uq=off attr=on  : 1993.5  ms
+----------------------------------------------
 ```
-
-
-
 
 
 
