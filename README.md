@@ -185,3 +185,33 @@ parser.end(stringChunk);
 
 ```
 
+
+## API Reference
+
+### Constructor Options
+You can pass a configuration object when creating a new instance: `new EasySax(config)`
+
+| Parameter | Description | Default |
+| :--- | :--- | :--- |
+| `autoEntity` (boolean) | Automatically decode HTML entities (`&amp;`, `&lt;`, `&quot;`, etc.) in text nodes. | `true` |
+| `lazy` (boolean) | If `true`, passes a `getAttr()` function to `startNode` for lazy attribute evaluation (saves memory/CPU). If `false`, attributes are evaluated immediately as an object. | `false` |
+| `strict` (boolean) | Enables strict parsing mode with rigorous XML syntax validation. Recommended if you are unsure about the quality of the input XML | `false` |
+| `defaultNS` (string) | Root element name for namespace rules. If empty, namespace processing is disabled. | `''` |
+| `ns` (object) | Namespace mapping object `{ 'http://uri': 'prefix' }`. Works only if `defaultNS` is set. | `null` |
+| `on` (object) | Object for bulk event subscription on initialization. Format: `{ startNode: fn, textNode: fn, ... }`. | `undefined` |
+| `intern` (boolean) | Enables string interning. Repeated strings (tag names, attributes) are deduplicated via `Map`, saving memory on large files. | `true` |
+| `map` (Map) | Custom `Map` object for storing interned strings. Allows sharing a single string pool across multiple parser instances. | `new Map()` |
+| `salt` (number) | Salt for the string hashing algorithm. Useful for isolating pools of different parsers when sharing a `map`. | `null` |
+| `entityDecode` (function) | Custom function for entity decoding. Overrides the built-in decoder. | Built-in function |
+
+### Methods
+
+| Method | Description |
+| :--- | :--- |
+| **`setup(config)`** | Applies or updates parser settings after creation. Accepts the same config object as the constructor. |
+| **`on(event, cb)`** | Subscribes a callback to a parsing event. Events: `startNode` (`opentag`), `endNode` (`closetag`), `textNode` (`text`), `cdata`, `comment`, `error`, `question`, `attention`, `unknownNS`. Passing `null` unsubscribes. |
+| **`ns(root, nsMap)`** | Sets namespace rules. `root` is the root element name, `nsMap` is `{ 'URI': 'prefix' }`. Calling `ns(null)` disables NS. Returns the parser instance (chainable). |
+| **`write(chunk)`** | Feeds a chunk of XML data to the parser. Can be called multiple times for streaming. Ignored if parsing was stopped via `stop()`. |
+| **`end([chunk])`** | Finalizes the parsing process. Optionally accepts a final data chunk. Resets internal state, freeing memory. |
+| **`parse(xml)`** | Convenience method to parse a small XML string entirely. Automatically calls `write(xml)` then `end()`. |
+| **`stop()`** | Forcefully stops parsing. Sets an internal flag, after which `write()` calls are ignored. Useful for early exit when target data is found. |

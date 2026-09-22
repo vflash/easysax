@@ -77,6 +77,7 @@ test({
 });
 
 test({
+    strict: true,
     xml: '<a><b></c></b></a>',
     to: [
         ['startNode', 'a', true, false],
@@ -148,8 +149,8 @@ test({
 test({
     xml: '<root></root>',
     to: [
-        ['startNode', 'root', true, false, '<root>'],
-        ['endNode', 'root', false, '</root>'],
+        ['startNode', 'root', true, false],
+        ['endNode', 'root', false],
     ],
 });
 
@@ -740,6 +741,7 @@ test({
 
 // Несоответствие регистра (XML case-sensitive)
 test({
+    strict: true,
     xml: '<Root></root>',
     to: [
         ['startNode', 'Root', true, false],
@@ -759,17 +761,17 @@ test({
 test({
     xml: '<root attr="val">text</root>',
     to: [
-        ['startNode', 'root', {attr: 'val'}, false, '<root attr="val">'],
+        ['startNode', 'root', {attr: 'val'}, false],
         ['textNode', 'text'],
-        ['endNode', 'root', false, '</root>'],
+        ['endNode', 'root', false],
     ],
 });
 
 test({
     xml: '<root attr="val"/>',
     to: [
-        ['startNode', 'root', {attr: 'val'}, true, '<root attr="val"/>'],
-        ['endNode', 'root', true, '<root attr="val"/>'],
+        ['startNode', 'root', {attr: 'val'}, true],
+        ['endNode', 'root', true],
     ],
 });
 

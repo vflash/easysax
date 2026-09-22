@@ -1,6 +1,7 @@
 module.exports = banch;
 
 var EasySax = require("../easysax.js");
+var isBun = !!(typeof process !== 'undefined' && process.versions && process.versions.bun);
 var count;
 var only;
 var xml;
@@ -28,6 +29,7 @@ async function banch(_xml, _count, _only) {
 
 
     var list = [
+        //test_stringIndexOf,
         /* Due to differences in launch configurations, only the results of the first test with EasySax are reliable */
         test_EasySax_on_on_on,
         test_EasySax_off_on_on,
@@ -49,14 +51,19 @@ async function banch(_xml, _count, _only) {
     ];
 
 
+    var countNode = 0;
+    var countText = 0;
+    var onNode;
+    var onText;
     var fn;
     while(fn = list.shift()) {
         await pause(50);
 
+
         if (typeof fn === 'string') {
             console.log(fn);
         } else {
-            await fn(_xml);
+            await fn(_xml, onNode, onText);
         };
     };
 
@@ -68,29 +75,34 @@ function nullfunc() {};
 function pause(ms) {new Promise(resolve => setTimeout(resolve, ms))};
 function ss(value, len) {return (value + '                                           ').slice(0, len)};
 
-async function test(name, test) {
-    if (count > 50) {
-        for(var z = 20; z--;) {
-            test();
-        };
-    } else {
-        test();
+async function test(name, go) {
+    var countNode = 0;
+    var countText = 0;
+    var onNode = function(tag, attrs) {countNode += 1};
+    var onText = function(text) {countText += 1};
+
+    var x = Date.now()
+    for(var z = count > 50 ? count : 1; z--;) {
+        go(onNode, onText);
+        if (Date.now() - x > 1000) break;
     };
 
-    await pause(50);
+    await pause(100);
 
     var tA = performance.now()
     for (var z = count; z--;) {
-        test();
+        countNode = 0;
+        countText = 0;
+        go(onNode, onText);
     };
     var tB = performance.now()
     let tx = x => ss(x.toFixed(x < 1000 ? 2 : 1), 7);
 
-    console.log(name + ' : ' + tx(tB - tA) + ' ms');
+    console.log(name + ' : ' + tx(tB - tA) + ' ms' + (countNode || countText ? '  -  ' + countNode + '  ' + countText : ''));
 };
 
 
-function test_charCodeAt() {
+function test_charCodeAt(xml) {
     test('charCodeAt', function() {
         var l = xml.length, x;
         var m = [];
@@ -107,10 +119,16 @@ function test_charCodeAt() {
 
 function test_stringIndexOf(xml) {
     test('stringIndexOf                    ', function() {
-        var j = xml.indexOf('>');
+        var j = 0;
+        var z = true;
         var m = [];
 
-        for (; j !== -1; j = xml.indexOf('>', j + 1)) {
+        while(true) {
+            j = xml.indexOf('<', j);
+            if (j === -1) break;
+            m.push(j);
+            j = xml.indexOf('>', j);
+            if (j === -1) break;
             m.push(j);
         };
     });
@@ -126,9 +144,14 @@ function test_Buffer(xml) {
 
 function test_sax(xml) {
     var saxjs = require('sax');
-    var parser = saxjs.parser(false);
 
-    test('saxjs             uq=on  attr=on ', function() {
+
+    test('saxjs             uq=on  attr=on ', function(onNode, onText) {
+        var parser = saxjs.parser(false);
+        parser.onopentag = function(node) {
+            onNode(node.name, node.attributes);
+        };
+        parser.ontext = onText;
         parser.write(xml).close();
     });
 };
@@ -143,11 +166,17 @@ async function test_saxwasm(xml) {
     const parser = new SAXParser(eventsType);
     await parser.prepareWasm(saxWasm);
 
-    async function parseXML(xmlString) {
+    async function parseXML(xmlString, onNode, onText) {
         parser.eventHandler = (eventType, data) => {
             // console.log('Событие:', eventType);
             // console.log('  Данные:', data);
             // console.log('---');
+            if (eventType === SaxEventType.OpenTag) {
+                onNode();
+            };
+            if (eventType === SaxEventType.Text) {
+                onText();
+            };
         };
 
         const buffer = new TextEncoder().encode(xmlString);
@@ -156,14 +185,18 @@ async function test_saxwasm(xml) {
         parser.end();
     }
 
-    test('saxwasm~' + ss(eventsType, 25), async function() {
-        await parseXML(xml).catch(err => {
+    test('saxwasm~' + ss(eventsType, 25), async function(onNode, onText) {
+        await parseXML(xml, onNode, onText).catch(err => {
           console.error('Ошибка:', err);
         });
     });
 };
 
 function test_libxmljs(xml) {
+    if (isBun) {
+        return;
+    };
+
     var libxml = require("libxmljs");
 
     function go() {
@@ -178,30 +211,38 @@ function test_libxmljs(xml) {
 };
 
 function test_nodeExpat_string(xml) {
+    if (isBun) {
+        return;
+    };
+
     var Expat = require('node-expat'), parser;
     function nullfunc() {};
 
-    test('expat                            ', function() {
+    test('expat                            ', function(onNode, onText) {
         parser = new Expat.Parser('utf-8');
 
-        parser.addListener('startElement', nullfunc);
+        parser.addListener('startElement', onNode);
         parser.addListener('endElement', nullfunc);
-        parser.addListener('text', nullfunc);
+        parser.addListener('text', onText);
 
         parser.parse(xml, true);
     });
 };
 
 function test_nodeExpat_Buffer(xml) {
+    if (isBun) {
+        return;
+    };
+
     var Expat = require('node-expat');
     var buff = new Buffer(xml), parser;
     function nullfunc() {};
 
-    test('expat buffer', function() {
+    test('expat buffer', function(onNode, onText) {
         parser = new Expat.Parser('utf-8');
-        parser.addListener('startElement', nullfunc);
+        parser.addListener('startElement', onNode);
         parser.addListener('endElement', nullfunc);
-        parser.addListener('text', nullfunc);
+        parser.addListener('text', onText);
         parser.parse(buff, true);
     });
 };
@@ -209,12 +250,12 @@ function test_nodeExpat_Buffer(xml) {
 function test_saxophone(xml) {
     var Saxophone = require('saxophone'); // bad
 
-    test('saxophone         uq=off attr=on ', function() {
+    test('saxophone         uq=off attr=on ', function(onNode, onText) {
         var parser = new Saxophone();
 
-        parser.on('tagopen', function(tag) {});
+        parser.on('tagopen', onNode);
         parser.on('tagclose', nullfunc)
-        parser.on('text', function(op) {});
+        parser.on('text', onText);
 
         parser.parse(xml);
     });
@@ -225,14 +266,12 @@ function test_ltx(xml) {
     var LtxSaxParser = require('ltx/lib/parsers/ltx.js');
     var countNodes = 0;
 
-    test('ltx               uq=on  attr=on ', function() {
+    test('ltx               uq=on  attr=on ', function(onNode, onText) {
         var parser = new LtxSaxParser();
 
-        parser.on('startElement', function(name, attrs) {
-            countNodes += 1;
-        })
+        parser.on('startElement', onNode)
         parser.on('endElement', nullfunc)
-        parser.on('text', nullfunc);
+        parser.on('text', onText);
 
         parser.end(xml);
     });
@@ -241,13 +280,13 @@ function test_ltx(xml) {
 function test_saxes(xml) {
     var {SaxesParser} = require('saxes');
 
-    test('saxes             uq=on  attr=on ', function() {
+    test('saxes             uq=on  attr=on ', function(onNode, onText) {
         var countNodes = 0;
         var parser = new SaxesParser({xmlns: false});
 
-        parser.on('opentag', function (name, attrs) {countNodes += 1})
+        parser.on('opentag', onNode)
         parser.on('closetag', function (name) {})
-        parser.on('text', function (text) {});
+        parser.on('text', onText);
 
         parser.write(xml);
         parser.close();
@@ -266,15 +305,16 @@ function test_EasySax_on_on_on(xml) {
         'http://schemas.google.com/g/2005': 'gd',
     };
 
-    test('easysax    ns=on  uq=on  attr=on ', function() {
+    test('easysax    ns=on  uq=on  attr=on ', function(onNode, onText) {
         var parser = new EasySax({
             autoEntity: true,
             defaultNS: 'rss',
+            lazy: false,
             ns: mapNS,
             on: {
-                startNode: function(tag, attr) {attr();countNodes += 1},
+                startNode: onNode,
                 endNode: nullfunc,
-                text: nullfunc,
+                text: onText,
             },
         });
 
@@ -283,17 +323,16 @@ function test_EasySax_on_on_on(xml) {
 };
 
 function test_EasySax_off_on_on(xml) {
-    var countNodes = 0;
-
-    test('easysax    ns=off uq=on  attr=on ', function() {
+    test('easysax    ns=off uq=on  attr=on ', function(onNode, onText) {
         var parser = new EasySax({
             autoEntity: true,
             defaultNS: null,
+            lazy: false,
             ns: null,
             on: {
-                startNode: function(tag, attr) {attr();countNodes += 1},
+                startNode: onNode,
                 endNode: nullfunc,
-                text: nullfunc,
+                text: onText,
             },
         });
 
@@ -303,17 +342,16 @@ function test_EasySax_off_on_on(xml) {
 };
 
 function test_EasySax_off_off_on(xml) {
-    var countNodes = 0;
-
-    test('easysax    ns=off uq=off attr=on ', function() {
+    test('easysax    ns=off uq=off attr=on ', function(onNode, onText) {
         var parser = new EasySax({
             autoEntity: false,
             defaultNS: null,
+            lazy: false,
             ns: null,
             on: {
-                startNode: function(tag, attr) {attr();countNodes += 1},
+                startNode: onNode,
                 endNode: nullfunc,
-                text: nullfunc,
+                text: onText,
             },
         });
 
@@ -322,17 +360,16 @@ function test_EasySax_off_off_on(xml) {
 };
 
 function test_EasySax_off_off_off(xml) {
-    var countNodes = 0;
-
-    test('easysax    ns=off uq=off attr=off', function() {
+    test('easysax    ns=off uq=off attr=off', function(onNode, onText) {
         var parser = new EasySax({
             autoEntity: false,
             defaultNS: null,
+            lazy: true,
             ns: null,
             on: {
-                startNode: function() {countNodes += 1},
+                startNode: onNode,
                 endNode: nullfunc,
-                text: nullfunc,
+                text: onText,
             },
         });
 
@@ -344,7 +381,7 @@ function test_EasySax_off_off_off(xml) {
 function test_saxen(xml) {
     var saxen = require('saxen');
 
-    test('saxen      ns=off uq=on  attr=on ', function() {
+    test('saxen      ns=off uq=on  attr=on ', function(onNode, onText) {
         var parser = new saxen.Parser();
         parser.on('openTag', function(elementName, attrGetter, decodeEntities) {
             var attrs = attrGetter();
@@ -362,16 +399,14 @@ function test_saxen(xml) {
 function test_eksml(xml) {
     var eksmlSaxParser = require('./eksml.js').default;
 
-    test('eksml             uq=off attr=on ', function() {
+    test('eksml             uq=off attr=on ', function(onNode, onText) {
         var countNodes = 0;
         var countText = 0;
         const parser = eksmlSaxParser();
 
-        parser.on('openTag', function (name, attrs) {
-            countNodes += 1;
-        })
+        parser.on('openTag', onNode)
         parser.on('closeTag', function (name) {})
-        parser.on('text', function (text) {countText += 1;});
+        parser.on('text', onText);
 
         parser.write(xml);
         parser.close();
@@ -382,16 +417,12 @@ function test_eksml(xml) {
 function test_tuananhSax(xml) {
     var SaxParser = require('@tuananh/sax-parser');
 
-    test('tuananh           uq=off attr=on ', function() {
-        var countNodes = 0;
-        var countText = 0;
+    test('tuananh           uq=off attr=on ', function(onNode, onText) {
         const parser = new SaxParser();
 
-        parser.on('startElement', function (name, attrs) { // attrs no decode entities
-            countNodes += 1;
-        })
-        parser.on('endElement', function (name) {})
-        parser.on('text', function (text) {countText += 1;});
+        parser.on('startElement', onNode);
+        parser.on('endElement', function (name) {});
+        parser.on('text', onText);
 
         parser.parse(xml);
     });

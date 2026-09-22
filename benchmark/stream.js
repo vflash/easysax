@@ -40,28 +40,26 @@ if (MOCK_TYPES.indexOf(MOCK_TYPE) === -1) {
 console.log(str('file: ' + FILE_NAME, 71) + ' elems    text');
 console.log("-".repeat(90));
 
-if (require.main === module) {
-    (async function() {
-        await test(test_empty);
+(async function() {
+    await test(test_empty);
 
-        await test(test_EasySax_on_on_on);
-        await test(test_EasySax_off_on_on);
-        await test(test_EasySax_off_off_on);
-        await test(test_EasySax_off_off_off);
+    /* Due to differences in launch configurations, only the results of the first test with EasySax are reliable */
+    await test(test_EasySax_on_on_on);
+    await test(test_EasySax_off_on_on);
+    await test(test_EasySax_off_off_on);
+    await test(test_EasySax_off_off_off);
 
-        console.log(' ');
+    console.log(' ');
 
-        await tryTest(test_eksml, 'eksml');
-        await tryTest(test_ltx, 'ltx');
-        await tryTest(test_saxes, 'saxes');
-        //await test(test_saxwasm_zero);
-        //await test(test_saxwasm_full);
-        //await test(test_saxwasm);
+    await tryTest(test_eksml, 'eksml');
+    await tryTest(test_ltx, 'ltx');
+    await tryTest(test_saxes, 'saxes');
+    //await test(test_saxwasm_zero);
+    //await test(test_saxwasm_full);
+    //await test(test_saxwasm);
 
-        console.log('-'.repeat(90));
-    })();
-};
-
+    console.log('-'.repeat(90));
+})();
 
 
 // тест с опциональной зависимостью: модуль не установлен - строка пропускается
@@ -507,11 +505,12 @@ function test_EasySax_on_on_on() {
     var parser = new EasySax({
         autoEntity: true,
         defaultNS: 'rss',
+        lazy: true,
         ns: mapNS,
         on: {
-            startNode: function (name, attr, isTagEnd, getStrNode) {
+            startNode: function (name, attrs, isTagEnd) {
                 countNodes += 1;
-                attr();
+                attrs();
             },
             endNode: nullFunc,
             text: function(text) {
@@ -539,11 +538,12 @@ function test_EasySax_off_on_on() {
     var parser = new EasySax({
         autoEntity: true,
         defaultNS: null,
+        lazy: true,
         ns: null,
         on: {
-            startNode: function (elem, attr) {
+            startNode: function (elem, attrs, isTagEnd) {
                 countNodes += 1;
-                attr();
+                attrs();
             },
             endNode: nullFunc,
             text: function(text) {countText += 1},
@@ -567,11 +567,12 @@ function test_EasySax_off_off_on() {
     var parser = new EasySax({
         autoEntity: false,
         defaultNS: null,
+        lazy: false,
         ns: null,
         on: {
-            startNode: function(name, attr) {
+            startNode: function(elem, attrs, isTagEnd) {
                 countNodes += 1;
-                attr();
+                //attrs();
             },
             endNode: nullFunc,
             text: function(text) {countText += 1},
@@ -597,9 +598,10 @@ function test_EasySax_off_off_off() {
     var parser = new EasySax({
         autoEntity: false,
         defaultNS: null,
+        lazy: true,
         ns: null,
         on: {
-            startNode: function() {countNodes += 1},
+            startNode: function(elem, attrs, isTagEnd) {countNodes += 1},
             endNode: nullFunc,
             text: function(text) {countText += 1},
         },

@@ -168,6 +168,8 @@ function test(options) {
         parser = new easysax({
             autoEntity: !!options.autoEntity,
             defaultNS: options.ns,
+            strict: !!options.strict,
+            lazy: true,
             ns: {
                 'http://search.yahoo.com/mrss/': 'media',
                 'http://www.w3.org/1999/xhtml': 'xhtml',
@@ -219,14 +221,6 @@ function test(options) {
                 };
 
                 continue;
-            };
-
-            if ((name === 'startNode' && index === 4) || (name === 'endNode' && index === 3)) {
-                var arg = args[index]();
-                if (arg !== value) {
-                    error = name + ':' + index + '  getStringNode ' + arg + ' !== ' + value;
-                };
-                break;
             };
 
             if (args[index] !== value) {
