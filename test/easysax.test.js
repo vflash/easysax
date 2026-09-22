@@ -162,6 +162,14 @@ test({
 });
 
 test({
+    xml: '<root __proto__="abc"></root>',
+    to: [
+        ['startNode', 'root', {['__proto__']: 'abc'}, false],
+        ['endNode', 'root', false],
+    ],
+});
+
+test({
     xml: '<root title="abc>abc"></root>',
     to: [
         ['startNode', 'root', {title: 'abc>abc'}, false],

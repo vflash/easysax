@@ -606,7 +606,7 @@ function EasySAXParser(config) {
             };
 
             if (name === '__proto__') {
-                Object.defineProperty(target, name, {value, writable: true, enumerable: true, configurable: true});
+                Object.defineProperty(attrs, name, {value, writable: true, enumerable: true, configurable: true});
             } else {
                 attrs[name] = value;
             };
