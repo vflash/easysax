@@ -11,7 +11,7 @@
         "parser",
         "pure"
     ],
-    "version": "0.6.x",
+    "version": "0.6.0",
     "main": "./easysax.js",
     "types": "./easysax.d.ts",
     "bugs": {
