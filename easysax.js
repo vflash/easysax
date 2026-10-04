@@ -12,11 +12,11 @@ new function() {
     parser.on('error', function(msgError) {
     });
 
-    parser.on('startNode', function(nodeName, getAttr, isTagEnd, getStrNode) {
+    parser.on('startNode', function(nodeName, getAttr, isTagEnd) {
         var attr = getAttr();
     });
 
-    parser.on('endNode', function(nodeName, isTagStart, getStrNode) {
+    parser.on('endNode', function(nodeName, isTagStart) {
     });
 
     parser.on('textNode', function(text) {

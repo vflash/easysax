@@ -7,17 +7,17 @@ declare class EasySAXParser {
 
     setup(options: EasySAXParser.SetupOptions): void;
 
+    getNodeString(): string;
+
     on(name: 'error', callback: (msgError: string) => void): this;
     on(name: 'startNode' | 'opentag' | 'openTag', callback: (
         nodeName: string,
         getAttr: () => Record<string, string>,
         isTagEnd: boolean,
-        getStrNode: () => string
     ) => void): this;
     on(name: 'endNode' | 'closetag' | 'closeTag', callback: (
         nodeName: string,
         isTagStart: boolean,
-        getStrNode: () => string
     ) => void): this;
     on(name: 'text' | 'textNode', callback: (text: string) => void): this;
     on(name: 'cdata', callback: (data: string) => void): this;

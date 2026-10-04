@@ -26,6 +26,15 @@ test({
     ],
 });
 
+test({
+    xml: '<raw><x:raw /></raw>',
+    to: [
+        ['startNode', 'raw', true, false, '<raw>'],
+        ['startNode', 'x:raw', true, true, '<x:raw />'],
+        ['endNode', 'x:raw', true, '<x:raw />'],
+        ['endNode', 'raw', false, '</raw>'],
+    ],
+});
 
 test({
     xml: '<dateTime.iso8601 />',
