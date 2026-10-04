@@ -134,7 +134,6 @@ var parser = new EasySax();
 parser.ns('rss', {
 	'http://www.w3.org/2005/Atom': 'atom',
 	'http://www.w3.org/1999/xhtml': 'xhtml',
-
 	'http://search.yahoo.com/mrss/': 'media',
 	'http://purl.org/rss/1.0/': 'rss',
 	'http://purl.org/dc/elements/1.1/': 'dc',
@@ -143,25 +142,23 @@ parser.ns('rss', {
 	'http://www.yandex.ru': 'yandex',
 	'http://news.yandex.ru': 'yandex',
 	'http://backend.userland.com/rss2': 'rss'
-
 });
 
 parser.on('error', function(msg) {
 	// console.log('error - ' + msg);
 });
 
-parser.on('startNode', function(elementName, getAttr, isTagEnd, getStringNode) {
+parser.on('opentag', function(elementName, attrs, isTagEnd) {
 	// elementName -- (string) element name. If namespaces are enabled, it automatically sets the prefix
-	// getAttr() -- (function) parse attributes and return an object
+	// attrs -- (object) object with attributes
 	// isTagEnd -- (boolean) flag that the element is empty "<elem/>"
-	// getStringNode() -- (function) returns the unparsed string of the element. example: <item title="text" id="x345">
 });
 
-parser.on('endNode', function(elementName, isTagStart, getStringNode) {
+parser.on('closetag', function(elementName, isTagStart) {
 	// isTagStart -- (boolean) flag that the element is empty "<elem/>"
 });
 
-parser.on('textNode', function(text) {
+parser.on('text', function(text) {
 	// text -- (String) line of text
 });
 
@@ -194,11 +191,11 @@ You can pass a configuration object when creating a new instance: `new EasySax(c
 | Parameter | Description | Default |
 | :--- | :--- | :--- |
 | `autoEntity` (boolean) | Automatically decode HTML entities (`&amp;`, `&lt;`, `&quot;`, etc.) in text nodes. | `true` |
-| `lazy` (boolean) | If `true`, passes a `getAttr()` function to `startNode` for lazy attribute evaluation (saves memory/CPU). If `false`, attributes are evaluated immediately as an object. | `false` |
+| `lazy` (boolean) | If `true`, passes a `getAttr()` function to `opentag` for lazy attribute evaluation (saves memory/CPU). If `false`, attributes are evaluated immediately as an object. | `false` |
 | `strict` (boolean) | Enables strict parsing mode with rigorous XML syntax validation. Recommended if you are unsure about the quality of the input XML | `false` |
 | `defaultNS` (string) | Root element name for namespace rules. If empty, namespace processing is disabled. | `''` |
 | `ns` (object) | Namespace mapping object `{ 'http://uri': 'prefix' }`. Works only if `defaultNS` is set. | `null` |
-| `on` (object) | Object for bulk event subscription on initialization. Format: `{ startNode: fn, textNode: fn, ... }`. | `undefined` |
+| `on` (object) | Object for bulk event subscription on initialization. Format: `{ opentag: fn, text: fn, ... }`. | `undefined` |
 | `intern` (boolean) | Enables string interning. Repeated strings (tag names, attributes) are deduplicated via `Map`, saving memory on large files. | `true` |
 | `map` (Map) | Custom `Map` object for storing interned strings. Allows sharing a single string pool across multiple parser instances. | `new Map()` |
 | `salt` (number) | Salt for the string hashing algorithm. Useful for isolating pools of different parsers when sharing a `map`. | `null` |
@@ -209,9 +206,10 @@ You can pass a configuration object when creating a new instance: `new EasySax(c
 | Method | Description |
 | :--- | :--- |
 | **`setup(config)`** | Applies or updates parser settings after creation. Accepts the same config object as the constructor. |
-| **`on(event, cb)`** | Subscribes a callback to a parsing event. Events: `startNode` (`opentag`), `endNode` (`closetag`), `textNode` (`text`), `cdata`, `comment`, `error`, `question`, `attention`, `unknownNS`. Passing `null` unsubscribes. |
+| **`on(event, cb)`** | Subscribes a callback to a parsing event. Events: `opentag`, `closetag`, `text`, `cdata`, `comment`, `error`, `question`, `attention`, `unknownNS`. Passing `null` unsubscribes. |
 | **`ns(root, nsMap)`** | Sets namespace rules. `root` is the root element name, `nsMap` is `{ 'URI': 'prefix' }`. Calling `ns(null)` disables NS. Returns the parser instance (chainable). |
 | **`write(chunk)`** | Feeds a chunk of XML data to the parser. Can be called multiple times for streaming. Ignored if parsing was stopped via `stop()`. |
 | **`end([chunk])`** | Finalizes the parsing process. Optionally accepts a final data chunk. Resets internal state, freeing memory. |
 | **`parse(xml)`** | Convenience method to parse a small XML string entirely. Automatically calls `write(xml)` then `end()`. |
 | **`stop()`** | Forcefully stops parsing. Sets an internal flag, after which `write()` calls are ignored. Useful for early exit when target data is found. |
+| **`getNodeString()`** | Returns the raw XML string of the current node being parsed. |

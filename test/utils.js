@@ -154,13 +154,13 @@ module.exports = function(op) {
     };
 
     runnerRun(name.substr(0, 275), function() {
-        assert.equal(false, test(op || false));
+        assert.equal(null, test(op || false));
     });
 };
 
 function test(options) {
     var parser = options.parser;
-    var error = false;
+    var error = null;
     var indexTest = -1;
     var list = [].concat(options.to);
 
@@ -204,14 +204,14 @@ function test(options) {
                 var attrs = args[index];
                 if (!value || value === true) {
                     if (attrs !== value) {
-                        error = '#' + indexTest + ' событие ' + name + ':' + index + '  attr: ' + str(attrs) + ' !== ' + value;
+                        error = '#' + indexTest + '.' + index + ' ' + name + ',  атрибут: ' + value + ' !== ' + str(attrs);
                         break;
                     };
                 };
 
-                for (var j in value) {
-                    if (value[j] !== attrs[j]) {
-                        error = '#' + indexTest + ' событие ' + name + ':' + index + ', атрибут  ' + j + ', значение ' + attrs[j] + ' !== ' + value[j];
+                for (var pp in value) {
+                    if (value[pp] !== attrs[pp]) {
+                        error = '#' + indexTest + '.' + index + ' ' + name + ', атрибут  ' + pp + ': ' + value[pp] + ' !== ' + attrs[pp];
                         break;
                     };
                 };
@@ -223,8 +223,16 @@ function test(options) {
                 continue;
             };
 
+            if ((name === 'startNode' && index === 4) || (name === 'endNode' && index === 3)) {
+                var nodeString = parser.getNodeString();
+                if (nodeString !== value) {
+                    error = '#' + indexTest + '.' + index + ' ' + name + ', getNodeString: ' + value + ' !== ' + nodeString;
+                };
+                break;
+            };
+
             if (args[index] !== value) {
-                error = '#' + indexTest + ' событие ' + name + ':' + index + ', значение ' + args[index] + ' !== ' + value;
+                error = '#' + indexTest + '.' + index + ' ' + name + ', value ' + value + ' !== ' + args[index];
                 break;
             };
         };
@@ -235,8 +243,8 @@ function test(options) {
         test('error');
     });
 
-    parser.on('startNode', function(elem, attr, tagend, getStrNode) {
-        test('startNode', elem, attr(), tagend, getStrNode);
+    parser.on('startNode', function(elem, attr, tagend) {
+        test('startNode', elem, attr(), tagend);
     });
 
     parser.on('endNode', function(elem, tagstart, str) {

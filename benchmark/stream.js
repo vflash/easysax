@@ -51,9 +51,11 @@ console.log("-".repeat(90));
 
     console.log(' ');
 
-    await tryTest(test_eksml, 'eksml');
-    await tryTest(test_ltx, 'ltx');
-    await tryTest(test_saxes, 'saxes');
+    await test(test_eksml, 'eksml');
+    await test(test_ltx, 'ltx');
+    await test(test_saxen, 'saxen');
+    await test(test_saxes, 'saxes');
+
     //await test(test_saxwasm_zero);
     //await test(test_saxwasm_full);
     //await test(test_saxwasm);
@@ -462,6 +464,34 @@ function test_saxes() {
     };
 };
 
+function test_saxen() {
+    var saxen = require('saxen');
+
+    var countNodes = 0;
+    var countText = 0;
+    var parser = new saxen.Parser();
+
+    parser.on('openTag', function(elementName, attrGetter, decodeEntities) {
+        var attrs = attrGetter();
+        for (var i in attrs) {
+            decodeEntities(attrs[i]);
+        };
+        countNodes += 1;
+    });
+    parser.on('closeTag', function() {})
+    parser.on('text', function() {countText += 1});
+
+    return {
+        name: 'saxen   ns=off uq=on  attr=on',
+        write: function(data) {
+            parser.write(data)
+        },
+        end: function() {
+            parser.end();
+            return {countNodes, countText};
+        },
+    };
+};
 
 function test_eksml() {
     var eksmlSaxParser = require('./eksml.js').default;
